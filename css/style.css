@@ -415,6 +415,21 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
 .gtip.drop::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:#0a0e20}
 .gws .gtip::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:#0a0e20}
 .gear-empty{grid-column:1/-1}
+/* o markup do tooltip dentro de tile/slot/skill é só FONTE — nunca exibido no lugar
+   (quem exibe é o #gtipFloat, position:fixed, acima de tudo) */
+.gi .gtip,.gws .gtip,.gw-sk .sktip{display:none !important}
+#gtipFloat{position:fixed;z-index:9999}
+#gtipFloat .gtip,#gtipFloat .sktip{position:static;opacity:1;visibility:visible;transform:none;display:block;
+  width:250px;pointer-events:auto;background:linear-gradient(180deg,#131a36,#0a0e20);
+  border:1px solid color-mix(in srgb,var(--rar,#3a4570) 60%,#1c2440);border-radius:12px;padding:11px 12px;
+  text-align:left;cursor:default;transition:none;
+  box-shadow:0 18px 44px rgba(0,0,0,.78),0 0 20px color-mix(in srgb,var(--rar,#3afff0) 16%,transparent);
+  animation:gtipIn .13s ease-out}
+@keyframes gtipIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+#gtipFloat .gtip::after,#gtipFloat .sktip::after{content:'';position:absolute;top:100%;left:var(--arwx,50%);
+  transform:translateX(-50%);border:7px solid transparent;border-top-color:#0a0e20}
+#gtipFloat.drop .gtip::after,#gtipFloat.drop .sktip::after{top:auto;bottom:100%;
+  border-top-color:transparent;border-bottom-color:#0a0e20}
 /* cabeçalho: arte da peça + nome + raridade com glow da raridade no topo */
 .gtip::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;border-radius:12px 12px 0 0;
   background:linear-gradient(90deg,transparent,var(--rar,#2a3358),transparent)}

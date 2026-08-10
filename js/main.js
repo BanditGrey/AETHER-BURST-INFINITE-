@@ -785,6 +785,7 @@ function buildResonanceStrip() {
 /* ---------- Painéis ---------- */
 function openPanel(view) {
   G.view = view;
+  gtipHide();
   // botão Progresso: abre o dashboard do projeto (página separada)
   if (view === 'progresso') { location.href = 'PROGRESSO.html'; return; }
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
@@ -1117,8 +1118,12 @@ function panelGear() {
           ${gearTooltipHTML(it, ir, 'Clique p/ desequipar', false)}
         </button>`;
       }
-      return `<button class="gws empty" data-gshow="${slotId}" title="${slotName(slotId)} vazio — clique p/ filtrar o inventário">
+      return `<button class="gws empty" data-gshow="${slotId}">
         <span class="gws-socket"></span><span class="gws-lbl">${slotShort(slotId)}</span>
+        <div class="gtip"><div class="gt-body">
+          <div class="gt-name" style="color:var(--muted);font-size:12px">${slotName(slotId)} vazio</div>
+          <div class="gt-desc" style="font-style:normal">Clique p/ filtrar o inventário por <b style="color:var(--aether)">${GEAR_SLOTS.find(g=>g.id===slotId).name}</b>.</div>
+        </div></div>
       </button>`;
     };
     h += `<div class="gw-detail" style="--rc:${r.color}">
@@ -1188,6 +1193,50 @@ function panelGear() {
   return h;
 }
 
+/* ---------- tooltip flutuante global (position:fixed — ignora overflow do inventário) ---------- */
+const GTIP = { el: null, hideT: 0 };
+function gtipEl() {
+  if (!GTIP.el) {
+    const d = document.createElement("div");
+    d.id = "gtipFloat";
+    d.style.display = "none";
+    document.body.appendChild(d);
+    // clique no botão ♻ dentro do tooltip flutuante (delegação — o conteúdo é clonado)
+    d.addEventListener("click", e => {
+      const b = e.target && e.target.closest ? e.target.closest("[data-salvage]") : null;
+      if (!b) return;
+      e.stopPropagation();
+      if (salvageItem(+b.dataset.salvage)) { sfxHit(); gtipHide(); openPanel("gear"); }
+    });
+    d.addEventListener("mouseenter", () => clearTimeout(GTIP.hideT));
+    d.addEventListener("mouseleave", () => gtipHideSoon());
+    GTIP.el = d;
+  }
+  return GTIP.el;
+}
+function gtipShowFor(el) {
+  const src = el.querySelector(".gtip, .sktip");
+  if (!src) return;
+  const tip = gtipEl();
+  clearTimeout(GTIP.hideT);
+  tip.innerHTML = src.outerHTML;
+  tip.style.display = "block";
+  const r = el.getBoundingClientRect();
+  const tw = tip.offsetWidth || 250, th = tip.offsetHeight || 160;
+  let x = r.left + r.width/2 - tw/2, drop = false;
+  if (window.innerWidth !== undefined) x = Math.max(8, Math.min(window.innerWidth - tw - 8, x));
+  let y = r.top - th - 10;
+  if (y < 8) { y = r.bottom + 10; drop = true; }
+  tip.style.left = Math.round(x) + "px";
+  tip.style.top  = Math.round(y) + "px";
+  tip.classList.toggle("drop", drop);
+  const inner = tip.firstElementChild;
+  if (inner && inner.style && inner.style.setProperty)
+    inner.style.setProperty("--arwx", Math.round(r.left + r.width/2 - x) + "px");
+}
+function gtipHide(){ if (GTIP.el) { GTIP.el.style.display = "none"; GTIP.el.innerHTML = ""; } }
+function gtipHideSoon(){ clearTimeout(GTIP.hideT); GTIP.hideT = setTimeout(gtipHide, 120); }
+
 function bindGear() {
   // selecionar runner
   document.querySelectorAll("[data-gsel]").forEach(b=>b.addEventListener("click", ()=>{
@@ -1222,18 +1271,15 @@ function bindGear() {
     notify(r.n ? `♻ ${r.n} peças recicladas → +${r.total} 💎` : "Nenhuma peça comum/incomum pra reciclar");
     sfxHit(); openPanel("gear");
   });
-  // tooltips: viram p/ dentro nas bordas e abrem p/ baixo na 1ª linha visível
-  document.querySelectorAll(".gi-grid .gi").forEach(t=>{
-    t.addEventListener("mouseenter", ()=>{
-      const tip = t.querySelector(".gtip");
-      const grid = t.parentElement;
-      if (!tip || !grid || t.offsetLeft === undefined || !grid.clientWidth) return;
-      tip.classList.toggle("al-l", t.offsetLeft < 120);
-      tip.classList.toggle("al-r", (grid.clientWidth - t.offsetLeft - t.offsetWidth) < 120);
-      const tr = t.getBoundingClientRect ? t.getBoundingClientRect() : null;
-      const gr = grid.getBoundingClientRect ? grid.getBoundingClientRect() : null;
-      tip.classList.toggle("drop", (tr && gr) ? (tr.top - gr.top) < 180 : t.offsetTop < 76);
-    });
+  // tooltips flutuantes: itens da bag, slots do retrato e fileira de skills
+  document.querySelectorAll(".gearwrap .gi, .gearwrap .gws, .gearwrap .gw-sk").forEach(t=>{
+    if (!t.querySelector || !t.querySelector(".gtip, .sktip")) return;
+    t.addEventListener("mouseenter", ()=> gtipShowFor(t));
+    t.addEventListener("mouseleave", ()=> gtipHideSoon());
+  });
+  // qualquer rolagem interna esconde o tooltip (ele ficaria desalinhado)
+  document.querySelectorAll(".gw-grid, .gw-detail, .gw-runners").forEach(s=>{
+    s.addEventListener && s.addEventListener("scroll", gtipHide);
   });
   // bag: rola com a roda (nativo) E com arrastar o mouse
   const dragGrid = document.querySelector(".gw-grid.gi-grid");
