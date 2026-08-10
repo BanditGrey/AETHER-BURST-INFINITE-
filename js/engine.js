@@ -7,20 +7,39 @@
 /* ---------- Constantes de layout ---------- */
 const PLAY_W = 1280, PLAY_H = 640;
 const GROUND_Y = 478;                 // linha do chão (topo da área de chão)
-// formação em bloco: vanguards numa fileira na frente (mesma linha de frente),
-// suportes (rear) logo atrás deles, formando um bloco compacto e organizado
-const VANGUARD_POS = [
-  { x: 300, y: GROUND_Y - 8 },   // vanguard esquerda
-  { x: 360, y: GROUND_Y - 8 },   // vanguard centro
-  { x: 420, y: GROUND_Y - 8 },   // vanguard direita (mesma linha de frente)
-];
-const REAR_POS = [
-  { x: 315, y: GROUND_Y - 40 },  // suporte esquerda (logo atrás)
-  { x: 405, y: GROUND_Y - 40 },  // suporte direita (logo atrás)
-];
-const VANGUARD_X = 330, VANGUARD_Y = [GROUND_Y - 24, GROUND_Y - 12, GROUND_Y];
-const REAR_X     = 215, REAR_Y     = [GROUND_Y - 18, GROUND_Y];
-const ENGAGE_X   = 452;          // inimigos param um pouco à direita da vanguard
+
+/* Formação aliada — grade FIXA de 2 colunas × 3 linhas (2×3), ancorada no
+   setor esquerdo da arena:
+     · slots 1 e 2 → primeira linha · slots 3 e 4 → segunda · 5 e 6 → terceira
+     · espaçamento horizontal entre as colunas constante (FORM_DX)
+     · espaçamento vertical entre as linhas constante (FORM_DY)
+   Tudo à direita da grade fica livre: a grande área central é reservada a
+   movimentação, ataques, projéteis, efeitos visuais e números de dano.
+   A posição de cada slot é o PONTO DOS PÉS do personagem — a base do sprite
+   fica ancorada nesse ponto, independentemente do tamanho do sprite. */
+const SQUAD_SLOTS = 6;
+const FORM_X0    = 210;                          // coluna 1 (retaguarda, mais à esquerda)
+const FORM_DX    = 120;                          // espaçamento horizontal constante entre colunas
+const FORM_COL_X = [FORM_X0, FORM_X0 + FORM_DX];
+const FORM_Y0    = GROUND_Y - 60;                // primeira linha (mais ao fundo)
+const FORM_DY    = 30;                           // espaçamento vertical constante entre linhas
+const FORM_ROW_Y = [FORM_Y0, FORM_Y0 + FORM_DY, FORM_Y0 + FORM_DY * 2];
+const FORM_FRONT_X = FORM_COL_X[FORM_COL_X.length - 1]; // coluna da frente (direita)
+/* posição do slot (1-based no HUD): leitura por linha — (1,2 / 3,4 / 5,6).
+   slotIndex 0→slot 1 … slotIndex 5→slot 6. Retorna o ponto dos pés. */
+function slotPos(slotIndex) {
+  const i = Math.max(0, Math.min(SQUAD_SLOTS - 1, slotIndex));
+  return { x: FORM_COL_X[i % 2], y: FORM_ROW_Y[Math.floor(i / 2)] };
+}
+/* adjacência na grade 2×3: parceiro da mesma linha ou vizinho de coluna
+   na linha imediatamente acima/abaixo (distância Manhattan = 1 na grade) */
+function slotAdjacent(a, b) {
+  const ra = Math.floor(a / 2), rb = Math.floor(b / 2);
+  const ca = a % 2, cb = b % 2;
+  return (ra === rb && ca !== cb) || (ca === cb && Math.abs(ra - rb) === 1);
+}
+
+const ENGAGE_X   = 452;          // inimigos param um pouco à direita da formação
 const SPAWN_X    = 1320;
 const ENEMY_HP_BASE = 220;       // base de HP dos inimigos
 
@@ -52,9 +71,11 @@ const G = {
   // codex: progresso de kills por runner (completar preenche o codex e dá pontos)
   codex: {},              // runnerId -> kills
   codexDone: {},          // runnerId -> true
-  // esquadrão
+  // esquadrão — grade 2×3: índices pares (0,2,4) = coluna 1 (retaguarda),
+  // ímpares (1,3,5) = coluna 2 (frente). Ordem padrão equilibra as colunas:
+  // ranged atrás (frost/nina/seraph), melee/tanque na frente (rex/kairo/zael).
   ownedRunners: ["kairo","zael","seraph","lyra","frost","nina","rex","sable"],
-  squadIds: ["kairo","zael","rex","frost","nina"],
+  squadIds: ["frost","rex","nina","kairo","seraph","zael"],
   // níveis individuais dos runners
   runnerLevels: {},
   // resonance: chave "a|b" -> xp
@@ -224,7 +245,6 @@ function infinityBonuses() {
     if (!node || !node.effect) continue;
     const e = node.effect;
     for (const k in e) {
-      if (k === "slot6") continue;
       out[k] = (out[k] || 0) + e[k];
     }
   }
@@ -281,14 +301,16 @@ function makeRunner(id, slotIndex) {
 }
 
 function positionRunner(u, slotIndex) {
-  // formação: slots 0-2 = vanguard, 3-4 = rear — cada slot numa posição própria
-  const p = slotIndex < 3 ? VANGUARD_POS[slotIndex] : REAR_POS[slotIndex - 3];
-  u.line = slotIndex < 3 ? "Vanguard" : "Rear";
+  // grade fixa 2×3: cada slot tem posição própria e inamovível (ponto dos pés).
+  // coluna da direita (slots 2/4/6) = linha de frente ("Vanguard");
+  // coluna da esquerda (slots 1/3/5) = retaguarda ("Rear").
+  const p = slotPos(slotIndex);
+  u.line = (slotIndex % 2 === 1) ? "Vanguard" : "Rear";
   u.homeX = p.x; u.homeY = p.y; u.x = p.x; u.y = p.y;
 }
 
-/* formação atual: quais ids estão em cada slot (5) */
-function runnerFormation() { return G.squadIds.slice(0, 5); }
+/* formação atual: quais ids estão em cada slot (grade 2×3 = 6 slots) */
+function runnerFormation() { return G.squadIds.slice(0, SQUAD_SLOTS); }
 
 function makeEnemy(typeKey, level, isBossScale) {
   const t = ENEMY_TYPES[typeKey];
@@ -764,8 +786,8 @@ function burstVisual(r, el) {
       for(const e of aoeTargets()){ setTimeout(()=>{ FX.burst(e.x, e.y, {count:18,color:el.color,speed:240,life:0.6,size:5,dir:-Math.PI/2,spread:1.6,gravity:200,shape:"shard"}); FX.ring(e.x,e.y-20,{color:el.color,rMax:90,life:0.4,width:4}); }, 100); }
       break;
     case "wind":
-      FX.ring(VANGUARD_X+20, GROUND_Y-50, {color:el.color,rMax:380,life:0.7,width:9,fill:true,fillAlpha:0.3});
-      for(let i=0;i<40;i++) FX.burst(VANGUARD_X+Math.random()*400, GROUND_Y-80+Math.random()*60, {count:1,color:i%2?el.color:el.glow,speed:180,life:0.9,size:4,shape:"spark",gravity:60});
+      FX.ring(FORM_FRONT_X+20, GROUND_Y-50, {color:el.color,rMax:380,life:0.7,width:9,fill:true,fillAlpha:0.3});
+      for(let i=0;i<40;i++) FX.burst(FORM_FRONT_X+Math.random()*400, GROUND_Y-80+Math.random()*60, {count:1,color:i%2?el.color:el.glow,speed:180,life:0.9,size:4,shape:"spark",gravity:60});
       break;
     default:
       FX.ring(cx,cy,{color:el.color,rMax:400,life:0.6,width:8});
@@ -915,9 +937,14 @@ function update(dt) {
     if (e.slowPct > 0) { spd *= (1 - e.slowPct); e.slowPct = Math.max(0, e.slowPct - dt*0.08); }
     if (e.frozen > 0) { e.frozen -= dt; spd = 0; }
     if (e.stunned > 0) { e.stunned -= dt; spd = 0; }
-    // movimento até linha de engajamento (velocidade de marcha)
+    // movimento até a linha de engajamento (velocidade de marcha).
+    // se o alvo está além do alcance (ex.: retaguarda da grade 2×3, que fica
+    // mais à esquerda), avança pelo centro livre até conseguir atingi-lo.
     const marchSpd = (spd/100) * 105;
-    if (e.x > e.targetX) e.x -= marchSpd * dt;
+    let goalX = e.targetX;
+    const chaseTgt = enemyTarget(e);
+    if (chaseTgt) goalX = Math.min(e.targetX, chaseTgt.x + e.range * 0.6);
+    if (e.x > goalX) e.x -= marchSpd * dt;
     // ataque
     if (spd > 0) {
       e.attackTimer -= dt;
@@ -1020,7 +1047,8 @@ function update(dt) {
     } else if (!r.burstReady) {
       r.burstHold = 0;
     }
-    // marcha: mantém posição em combate (melee já avançou) e volta ao posto quando a wave acaba
+    // marcha: em combate o melee avança pelo centro livre (limitado à linha de
+    // engajamento); sem inimigos, todos retornam ao slot da grade 2×3
     const hasEnemies = aliveEnemies().length > 0;
     if (!hasEnemies) r.x += (r.homeX - r.x) * Math.min(1, dt*6);
     else r.x = Math.min(ENGAGE_X - 20, Math.max(r.homeX, r.x));
@@ -1088,7 +1116,8 @@ function applyOvercharge() {
   const nina = G.runners.find(r=>r.id==="nina"&&r.alive);
   if (nina) {
     for (const r of G.runners) {
-      if (r!==nina && Math.abs(r.slotIndex - nina.slotIndex) <= 1) {
+      // "adjacentes" = vizinhos na grade 2×3 (mesma linha ou mesma coluna)
+      if (r!==nina && slotAdjacent(r.slotIndex, nina.slotIndex)) {
         r.spd *= 1.15; r.attackInterval = Math.max(0.3, 1.25/(r.spd/100));
       }
     }
@@ -1152,6 +1181,15 @@ function load() {
     if (!G.ascensionPoints) G.ascensionPoints = 0;
     if (!G.codex) G.codex = {};
     if (!G.codexDone) G.codexDone = {};
+    // normaliza o esquadrão para a grade fixa 2×3 (6 slots)
+    if (!Array.isArray(G.squadIds)) G.squadIds = [];
+    G.squadIds = G.squadIds.slice(0, SQUAD_SLOTS);
+    while (G.squadIds.length < SQUAD_SLOTS) G.squadIds.push(null);
+    // saves antigos (5 runners): o novo 6º slot recebe um runner reserva
+    if (!G.squadIds[SQUAD_SLOTS - 1]) {
+      const spare = G.ownedRunners.find(id => !G.squadIds.includes(id));
+      if (spare) G.squadIds[SQUAD_SLOTS - 1] = spare;
+    }
     return true;
   } catch(e){ return false; }
 }

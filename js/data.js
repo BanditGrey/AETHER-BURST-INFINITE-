@@ -218,7 +218,7 @@ const INFINITY_NODES = [
   { id:"drop",   x:.82, y:.30, branch:"recursos",  name:"Drop Rate +", cost:3, desc:"+15% Drop de equipamentos",        effect:{ drop:0.15 } },
   { id:"offline",x:.82, y:.56, branch:"recursos",  name:"Offline +",   cost:3, desc:"+15% eficiência offline",          effect:{ offline:0.15 } },
   { id:"ach1",   x:.34, y:.74, branch:"poder",     name:"Aether Charge",cost:4, desc:"+20% velocidade de Burst",         effect:{ ach:0.20 } },
-  { id:"slot6",  x:.66, y:.74, branch:"recursos",  name:"6º Slot",     cost:8, desc:"Desbloqueia 6º Runner na formação",effect:{ slot6:true } },
+  { id:"slot6",  x:.66, y:.74, branch:"recursos",  name:"Overdrive",    cost:8, desc:"+15% velocidade de Burst global (a formação 2×3 já inclui os 6 slots)", effect:{ ach:0.15 } },
 ];
 
 /* ============================================================

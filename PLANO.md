@@ -24,7 +24,7 @@ jogo **online** com conta, leaderboard e social — mantendo a cara de jogo de v
 ### FASE 1 — Fundação ✅ (concluída)
 Jogo web jogável de ponta a ponta.
 - [x] Núcleo de combate (alcance, crit, esquiva, elementos)
-- [x] Formação de esquadrão (Vanguard 3 + Rear 2)
+- [x] Formação de esquadrão (grade fixa 2×3 — 6 slots no setor esquerdo, âncora nos pés)
 - [x] Aether Burst + Burst Sync/Resonance
 - [x] Progressão de marcha e zonas
 - [x] Economia (Shards, Tickets, Fragments)

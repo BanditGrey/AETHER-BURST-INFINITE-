@@ -328,13 +328,16 @@ function drawRunner(r) {
     // escala por profundidade: mais à frente (maior y) = maior sprite (perspectiva)
     const depth = clamp(0.88 + (r.y - (GROUND_Y-44)) / 44 * 0.3, 0.88, 1.18);
     const hgt = 96 * depth * s;       // altura do sprite em unidades de jogo
-    ctx.drawImage(rimg, -hgt/2, -hgt, hgt, hgt);
+    // âncora nos pés: a base do sprite fica exatamente sobre o ponto do slot,
+    // preservando a proporção original — vale para qualquer tamanho de sprite
+    const wid = hgt * ((rimg.width / rimg.height) || 1);
+    ctx.drawImage(rimg, -wid/2, -hgt, wid, hgt);
     ctx.rotate(0);
     // hit flash sobre o sprite
     if (r.hitFlash > 0) {
       ctx.globalAlpha = (r.hitFlash/0.18)*0.5;
       ctx.fillStyle = '#fff';
-      ctx.fillRect(-hgt/2, -hgt, hgt, hgt);
+      ctx.fillRect(-wid/2, -hgt, wid, hgt);
       ctx.globalAlpha = dying?0.25:1;
     }
     // escudo
@@ -464,20 +467,22 @@ function drawEnemy(e) {
   if (eimg) {
     const depth = clamp(0.88 + (e.y - (GROUND_Y-44)) / 44 * 0.3, 0.88, 1.18);
     const hgt = sz * 2.4 * depth;         // altura do sprite (tamanho × profundidade)
+    // base do sprite ancorada no ponto dos pés, proporção original preservada
+    const wid = hgt * ((eimg.width / eimg.height) || 1);
     ctx.globalAlpha = e.alive ? 1 : Math.max(0, e.dyingTimer/0.5);
-    ctx.drawImage(eimg, -hgt/2, -hgt, hgt, hgt);
+    ctx.drawImage(eimg, -wid/2, -hgt, wid, hgt);
     ctx.globalAlpha = 1;
     // hit flash
     if (e.hitFlash > 0) {
       ctx.globalAlpha = (e.hitFlash/0.18)*0.5;
       ctx.fillStyle = '#fff';
-      ctx.fillRect(-hgt/2, -hgt, hgt, hgt);
+      ctx.fillRect(-wid/2, -hgt, wid, hgt);
       ctx.globalAlpha = 1;
     }
     // frozen
     if (e.frozen > 0) {
       ctx.fillStyle = hexA('#9be3ff',0.4);
-      ctx.fillRect(-hgt/2, -hgt, hgt, hgt);
+      ctx.fillRect(-wid/2, -hgt, wid, hgt);
     }
     ctx.restore();
     // gravity mark ring
@@ -763,8 +768,8 @@ function openPanel(view) {
 }
 
 function panelSquad() {
-  const slots = ['V1','V2','V3','R1','R2'];
-  let h = `<h2>MONTAR ESQUADRÃO</h2><div class="panel-sub">5 Runners · Vanguard (frente) e Rear Guard (trás). Clique num slot para posicionar.</div>`;
+  const slots = ['S1','S2','S3','S4','S5','S6'];
+  let h = `<h2>MONTAR ESQUADRÃO</h2><div class="panel-sub">6 Runners · formação fixa 2×3 (2 colunas × 3 linhas) no setor esquerdo da arena. Slots 1–2 na 1ª linha, 3–4 na 2ª e 5–6 na 3ª; a coluna 2 (S2/S4/S6) é a linha de frente.</div>`;
   h += `<div class="squad-grid">`;
   for (const id of RUNNERS.map(r=>r.id)) {
     const r = RUNNER_BY_ID[id];
@@ -772,7 +777,7 @@ function panelSquad() {
     const li = G.runnerLevels[id];
     const lvl = li? li.level : 1;
     const inSquadIdx = G.squadIds.indexOf(id);
-    const inSquad = inSquadIdx >= 0 && inSquadIdx < 5;
+    const inSquad = inSquadIdx >= 0 && inSquadIdx < SQUAD_SLOTS;
     // stats aproximados
     const u = makeRunner(id, 0); u.level = lvl; computeStats(u);
     const rar = RARITIES[r.rarity];
@@ -800,14 +805,16 @@ function panelSquad() {
     </div>`;
   }
   h += `</div>`;
-  // formação visual
-  h += `<div style="padding:0 24px 24px"><div style="font-family:Orbitron;font-weight:700;font-size:13px;color:var(--muted);margin-bottom:8px">FORMAÇÃO ATUAL</div>`;
-  h += `<div style="display:flex;gap:20px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:16px;justify-content:center">`;
-  h += `<div style="text-align:center"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">VANGUARD</div><div style="display:flex;gap:8px">`;
-  for (let i=0;i<3;i++){ const id=G.squadIds[i]; h+=formationSlot(id,slots[i]); }
-  h += `</div></div><div style="text-align:center"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">REAR GUARD</div><div style="display:flex;gap:8px">`;
-  for (let i=3;i<5;i++){ const id=G.squadIds[i]; h+=formationSlot(id,slots[i]); }
-  h += `</div></div></div></div>`;
+  // formação visual — grade fixa 2×3 (espelha o layout da arena)
+  h += `<div style="padding:0 24px 24px"><div style="font-family:Orbitron;font-weight:700;font-size:13px;color:var(--muted);margin-bottom:8px">FORMAÇÃO ATUAL — GRADE 2×3 (setor esquerdo da arena)</div>`;
+  h += `<div style="background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:16px">`;
+  h += `<div style="display:grid;grid-template-columns:repeat(2,64px);gap:10px 18px;justify-content:center">`;
+  h += `<div style="text-align:center;font-size:10px;color:var(--muted);font-family:Orbitron;letter-spacing:1px">COLUNA 1<br>RETAGUARDA</div>`;
+  h += `<div style="text-align:center;font-size:10px;color:var(--muted);font-family:Orbitron;letter-spacing:1px">COLUNA 2<br>FRENTE</div>`;
+  for (let i=0;i<SQUAD_SLOTS;i++){ const id=G.squadIds[i]; h+=formationSlot(id,slots[i]); }
+  h += `</div>`;
+  h += `<div style="text-align:center;color:var(--muted);font-size:11px;margin-top:10px">Slots 1–2 na 1ª linha · 3–4 na 2ª · 5–6 na 3ª — cada personagem ancorado pelo ponto dos pés.</div>`;
+  h += `</div></div>`;
   return h;
 }
 function formationSlot(id, label){
@@ -824,17 +831,15 @@ function bindPanel() {
     card.querySelector('[data-slot]')?.addEventListener('click', e=>{
       const act = e.currentTarget.dataset.slot;
       if (act==='add') {
-        const empty = G.squadIds.findIndex((s,i)=>!s || i>=5);
-        // se cheio, substitui o último
-        if (G.squadIds.filter(Boolean).length>=5) G.squadIds[4]=id;
-        else { const idx = G.squadIds.findIndex(s=>!s); G.squadIds[idx>=0?idx:4]=id; }
-        // garante 5 slots
-        while(G.squadIds.length<5) G.squadIds.push(null);
+        // se a grade 2×3 estiver cheia, substitui o último slot (S6)
+        if (G.squadIds.filter(Boolean).length>=SQUAD_SLOTS) G.squadIds[SQUAD_SLOTS-1]=id;
+        else { const idx = G.squadIds.findIndex(s=>!s); G.squadIds[idx>=0?idx:SQUAD_SLOTS-1]=id; }
       } else {
         const idx = G.squadIds.indexOf(id); if(idx>=0) G.squadIds[idx]=null;
       }
-      G.squadIds = G.squadIds.slice(0,5);
-      while(G.squadIds.length<5) G.squadIds.push(null);
+      // garante exatamente os 6 slots da grade
+      G.squadIds = G.squadIds.slice(0,SQUAD_SLOTS);
+      while(G.squadIds.length<SQUAD_SLOTS) G.squadIds.push(null);
       buildSquad(); buildBurstBars(); save();
       $('panelContent').innerHTML = panelSquad(); bindPanel();
     });

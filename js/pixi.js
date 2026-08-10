@@ -342,7 +342,9 @@ window.PIXIR = (function () {
   }
   function makeRunnerSprite(id, tex) {
     const spr = new PIXI.Sprite(tex);
-    spr.anchor.set(0.5, 0.5);
+    // âncora na base central (pés): o ponto do slot é sempre a base do sprite,
+    // independentemente do tamanho/proporção da textura carregada
+    spr.anchor.set(0.5, 1);
     return spr;
   }
 
@@ -606,15 +608,17 @@ window.PIXIR = (function () {
       if (u.kind === 'runner') {
         const spr = drawRunnerUnit(unitG, u);
         if (spr) {
-          // posiciona o sprite (já ancorado no centro)
+          // posiciona o sprite ancorado pelos pés (anchor 0.5,1)
           const s = u.burstScale || 1;
           const bob = Math.sin(u.bob) * 2;
           // escala por profundidade: mais à frente (maior y) = maior sprite
           const depth = Math.min(1.18, Math.max(0.88, 0.88 + (u.y - (GROUND_Y-44)) / 44 * 0.3));
           const hgt = 96 * depth * s;            // altura alvo em unidades de jogo
-          spr.height = hgt; spr.width = hgt;
+          const tw = spr.texture.width || 1, th = spr.texture.height || 1;
+          spr.height = hgt;
+          spr.width = hgt * (tw / th);           // preserva a proporção do sprite
           spr.x = u.x;
-          spr.y = u.y + bob - hgt * 0.5;         // pé próximo ao ponto de apoio
+          spr.y = u.y + bob;                     // base do sprite = ponto dos pés no slot
           spr.alpha = u.alive ? 1 : 0.35;
           spr.visible = true;
           if (!spriteLayer.children.includes(spr)) spriteLayer.addChild(spr);
@@ -625,9 +629,11 @@ window.PIXIR = (function () {
           const bob = Math.sin(u.bob) * 2;
           const depth = Math.min(1.18, Math.max(0.88, 0.88 + (u.y - (GROUND_Y-44)) / 44 * 0.3));
           const hgt = u.size * 2.4 * depth;      // altura escala com tamanho × profundidade
-          spr.height = hgt; spr.width = hgt;
+          const tw = spr.texture.width || 1, th = spr.texture.height || 1;
+          spr.height = hgt;
+          spr.width = hgt * (tw / th);           // mesma âncora de pés dos aliados
           spr.x = u.x;
-          spr.y = u.y + bob - hgt * 0.5;
+          spr.y = u.y + bob;
           spr.alpha = u.alive ? 1 : 0.35;
           spr.visible = true;
           if (!spriteLayer.children.includes(spr)) spriteLayer.addChild(spr);
