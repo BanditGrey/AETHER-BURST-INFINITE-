@@ -42,8 +42,10 @@ Base gráfica em 2 motores (Canvas + WebGL/Pixi), sprites dos Runners no padrão
 - [x] Render WebGL via PixiJS (opt-in)
 - [x] Sprites dos Runners (padrão de arte definido e salvo)
 - [x] Sons (WebAudio) + mute
-- [ ] **Sprites de inimigos e bosses** ← PRÓXIMO (maior impacto)
+- [x] **Sprites de inimigos e bosses**
 - [x] **Arte de fundo por zona (7 zonas)** — v2 regenerada com plano de chão em perspectiva (anti-flutuação da grade 2×3)
+- [x] **Idle dos Runners com pés plantados** (squash & stretch + inclinação de ataque)
+- [ ] **Sprites de skills (8 Runners + 7 mobs)** ← PRÓXIMO — skill VFX em sprite (projéteis, cortes, ondas) por elemento, substituindo FX 100% procedural; ver inventário no PROGRESSO.html
 - [ ] **UI com cara de jogo** (menus, painéis, transições)
 
 ### FASE 4 — Conteúdo & profundidade (pendente)
