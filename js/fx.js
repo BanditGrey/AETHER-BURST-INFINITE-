@@ -102,6 +102,51 @@ FX.beam = function (x1, y1, x2, y2, opts) {
   });
 };
 
+/* ---------- Sprites de skill (VFX em imagem com física própria) ----------
+   Padrão de asset: assets/skills/{key}.png com alpha (chroma removido),
+   trimado, projéteis horizontais apontando para a DIREITA. */
+FX.sprites = [];
+const SKILL_SPRITE_V = "skv1-0810";   // cache-bust dos sprites de skill
+const SKILL_IMGS = {};                // key -> HTMLImageElement (browser) | null
+function skillSpriteUrl(key) { return "assets/skills/" + key + ".png?v=" + SKILL_SPRITE_V; }
+function ensureSkillImg(key) {
+  if (SKILL_IMGS[key] !== undefined) return SKILL_IMGS[key];
+  SKILL_IMGS[key] = null;
+  if (typeof Image === "undefined") return null;   // ambiente sem DOM
+  const img = new Image();
+  img.onload = () => { SKILL_IMGS[key] = img; };
+  img.onerror = () => { SKILL_IMGS[key] = false; };
+  img.src = skillSpriteUrl(key);
+  return SKILL_IMGS[key];
+}
+/* envelope de alpha do sprite de skill: fade-in no começo, fade-out no fim */
+function fxSpriteAlpha(s) {
+  const t = s.life / s.maxLife;                       // 1 → 0
+  const ain  = s.fadeIn  > 0 ? Math.min(1, (1 - t) / s.fadeIn)  : 1;
+  const aout = s.fadeOut > 0 ? Math.min(1, t / s.fadeOut) : 1;
+  return Math.max(0, Math.min(ain, aout));
+}
+/* Spawn de sprite de skill (projétil/corte/onda).
+   opts: vx,vy velocidade · life · size (altura alvo em unidades de jogo;
+   largura segue a proporção da imagem) · grow (%/s) · rot,spin (rad) ·
+   fadeIn,fadeOut (fração da vida) · flipX */
+FX.sprite = function (key, x, y, opts) {
+  opts = opts || {};
+  ensureSkillImg(key);
+  FX.sprites.push({
+    key, x, y,
+    vx: opts.vx || 0, vy: opts.vy || 0,
+    life: opts.life || 0.6, maxLife: opts.life || 0.6,
+    size: opts.size || 64,
+    grow: opts.grow !== undefined ? opts.grow : 0,
+    rot: opts.rot || 0, spin: opts.spin || 0,
+    fadeIn:  opts.fadeIn  !== undefined ? opts.fadeIn  : 0.12,
+    fadeOut: opts.fadeOut !== undefined ? opts.fadeOut : 0.30,
+    flipX: !!opts.flipX,
+  });
+  if (FX.sprites.length > 40) FX.sprites.splice(0, FX.sprites.length - 40);
+};
+
 /* texto flutuante genérico (não-dano) */
 FX.floatText = function (x, y, text, opts) {
   opts = opts || {};
@@ -182,6 +227,16 @@ FX.update = function (dt) {
     b.life -= dt;
     if (b.life <= 0) FX.beams.splice(i, 1);
   }
+  // sprites de skill (projéteis/cortes/ondas)
+  for (let i = FX.sprites.length - 1; i >= 0; i--) {
+    const s = FX.sprites[i];
+    s.life -= dt;
+    if (s.life <= 0) { FX.sprites.splice(i, 1); continue; }
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.rot += s.spin * dt;
+    s.size *= (1 + s.grow * dt);
+  }
   // damage numbers
   for (let i = FX.damageNumbers.length - 1; i >= 0; i--) {
     const d = FX.damageNumbers[i];
@@ -255,6 +310,24 @@ FX.render = function (ctx) {
     } else {
       ctx.beginPath(); ctx.arc(p.x, p.y, p.size * a, 0, Math.PI * 2); ctx.fill();
     }
+    ctx.restore();
+  }
+
+  // sprites de skill (projéteis/cortes/ondas) — acima das partículas
+  for (const s of FX.sprites) {
+    const img = ensureSkillImg(s.key);
+    if (!img) continue;                              // ainda carregando / ausente
+    const a = fxSpriteAlpha(s);
+    if (a <= 0.01) continue;
+    const h = s.size;
+    const w = h * (img.width / img.height || 2);     // largura pela proporção real
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(s.x, s.y);
+    if (s.rot) ctx.rotate(s.rot);
+    if (s.flipX) ctx.scale(-1, 1);
+    ctx.shadowColor = "#bfe9ff"; ctx.shadowBlur = 18; // brilho de energia
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
     ctx.restore();
   }
 

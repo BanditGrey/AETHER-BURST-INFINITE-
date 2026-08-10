@@ -642,8 +642,9 @@ function useSkill(r) {
   r.castGlow = 1; r.swing = 1;
   const el = ELEMENTS[r.element];
   switch (r.id) {
-    case "kairo": { // Volt Fang — avança batendo em todos
-      FX.beam(r.x, r.y - 24, ENGAGE_X + 120, r.y - 24, { color: el.color, width: 7, life: 0.3 });
+    case "kairo": { // Volt Fang — projétil de raio que cruza a linha inimiga
+      FX.sprite("kairo_volt_fang", r.x + 36, r.y - 28, { vx: 1400, life: 0.6, size: 66 });
+      FX.burst(r.x + 30, r.y - 26, { count: 10, color: el.color, speed: 200, life: 0.35, size: 3, spread: Math.PI * 0.8, dir: 0, glow: true });
       for (const e of aoeTargets()) dealDamage(r, e, r.atq * 1.4, { color: el.glow });
       break;
     }

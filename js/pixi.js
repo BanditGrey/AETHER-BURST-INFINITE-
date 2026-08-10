@@ -60,6 +60,7 @@ window.PIXIR = (function () {
   let unitG = null;    // todas as unidades (runners + enemies)
   let spriteLayer = null; // sprites de imagem dos runners (GPU)
   let fxG = null;      // FX (partículas, anéis, feixes)
+  let fxSprC = null;   // sprites de skill (projéteis/cortes por imagem)
   let textLayer = null;// container de textos (números, flutuantes)
   let hudG = null;     // barras de HP / progresso / boss
   let overlayG = null; // flash + vignette
@@ -91,6 +92,7 @@ window.PIXIR = (function () {
       unitG = new PIXI.Graphics();
       spriteLayer = new PIXI.Container();
       fxG = new PIXI.Graphics();
+      fxSprC = new PIXI.Container();
       textLayer = new PIXI.Container();
       hudG = new PIXI.Graphics();
       overlayG = new PIXI.Graphics();
@@ -99,6 +101,7 @@ window.PIXIR = (function () {
       app.stage.addChild(spriteLayer);
       app.stage.addChild(unitG);
       app.stage.addChild(fxG);
+      app.stage.addChild(fxSprC);
       app.stage.addChild(textLayer);
       app.stage.addChild(hudG);
       app.stage.addChild(overlayG);
@@ -503,6 +506,45 @@ window.PIXIR = (function () {
     }
   }
 
+  /* ---------- sprites de skill (projéteis/cortes por imagem) ---------- */
+  const fxSprCache = {};   // key -> PIXI.Sprite
+  function ensureFxSprite(key) {
+    if (fxSprCache[key] !== undefined) return fxSprCache[key];
+    fxSprCache[key] = null; // marca "em progresso"
+    try {
+      const url = skillSpriteUrl(key);   // helpers vêm do fx.js
+      const tex = (PIXI.Assets && PIXI.Assets.load) ? null : (PIXI.Texture.from && PIXI.Texture.from(url));
+      if (tex && tex.valid) { fxSprCache[key] = makeFxSprite(tex); return fxSprCache[key]; }
+      if (PIXI.Assets && PIXI.Assets.load) {
+        PIXI.Assets.load(url).then(t => { if (t && t.valid) fxSprCache[key] = makeFxSprite(t); }).catch(() => {});
+      }
+    } catch (e) { /* fica procedural */ }
+    return null;
+  }
+  function makeFxSprite(tex) {
+    const spr = new PIXI.Sprite(tex);
+    spr.anchor.set(0.5, 0.5);            // centro (projéteis giram em torno do próprio eixo)
+    return spr;
+  }
+  function drawFxSprites() {
+    for (let i = fxSprC.children.length - 1; i >= 0; i--) fxSprC.children[i].visible = false;
+    for (const s of FX.sprites) {
+      const spr = ensureFxSprite(s.key);
+      if (!spr) continue;
+      const a = fxSpriteAlpha(s);
+      if (a <= 0.01) continue;
+      const h = s.size;
+      const w = h * ((spr.texture.width / spr.texture.height) || 2);
+      spr.width = s.flipX ? -w : w;
+      spr.height = h;
+      spr.x = s.x; spr.y = s.y;
+      spr.rotation = s.rot || 0;
+      spr.alpha = a;
+      spr.visible = true;
+      if (!fxSprC.children.includes(spr)) fxSprC.addChild(spr);
+    }
+  }
+
   /* ---------- FX ---------- */
   function drawFX() {
     fxG.clear();
@@ -650,6 +692,7 @@ window.PIXIR = (function () {
 
     drawHPBars();
     drawFX();
+    drawFxSprites();
     drawTexts();
     drawOverlay();
     applyCam();

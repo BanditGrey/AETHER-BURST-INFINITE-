@@ -76,6 +76,32 @@ Isso garante consistência total entre todos os assets gerados.
 
 ---
 
+## ⚡ SKILL SPRITES (VFX) — padrão
+
+> Efeitos de skill em imagem, integrados pela camada `FX.sprite()` (física
+> própria: velocidade, rotação, grow, fade-in/out). Renderizados no Canvas
+> e no Pixi/WebGL acima das unidades.
+
+- **Fundo:** chroma verde. ⚠️ O gerador **não garante** `#00FF00` puro —
+  **amostrar a cor do canto** e usar como alvo:
+  `BG=$(convert IMG -format "%[pixel:p{0,0}]" info:)` →
+  `convert IMG -alpha on -fuzz 16% -transparent "$BG" -trim +repage OUT`
+- **Tamanho:** máx 256px no maior lado; **manter proporção natural** (sem
+  forçar quadrado — largura é derivada da altura-alvo no jogo).
+- **Orientação:** projéteis horizontais apontando para a **DIREITA**
+  (ataques aliados); mobs usam `flipX`.
+- **Conteúdo:** UM único efeito por arquivo, centrado, com glow saturado
+  na cor do elemento; sem personagens, mãos, armas ou texto.
+- **Checagem pós-processamento:** cantos com alpha 0, centro opaco,
+  sem franja verde (testar sobre fundo escuro).
+
+| Skill | Arquivo | Descrição gerada |
+|-------|---------|------------------|
+| KAIRO "Volt Fang" ✓ piloto | `assets/skills/kairo_volt_fang.png` | presa de raio azul-ciano em zigue-zague, núcleo branco, fagulhas atrás (256×57) |
+| demais 14 (7 runners + 7 mobs) | pendentes | seguir este padrão |
+
+---
+
 ## 🌄 CENÁRIOS (fundos das 7 zonas) — padrão ANTI-FLUTUAÇÃO
 
 > Personagens ficam ancorados pelos pés na grade 2×3 (y = 395 / 480 / 565).
