@@ -53,7 +53,7 @@ Base gráfica em 2 motores (Canvas + WebGL/Pixi), sprites dos Runners no padrão
 - [x] **Gear PROCS reais** — os 11 efeitos de sabor viraram mecânicas: descarga em cadeia, pós-esquiva ×3, congelar em skill, +2% dano/ataque, Gravity Mark no básico, +10% Burst Sync, cura 15% no Burst, +10% ATQ aliado no Burst, +20% vs debuff, sobreviver c/ 1 HP (1×/combate), Burst +dano por HP; chip ✦PROC no card
 - [x] **Painel Equipar estilo tela de jogo** (referência do usuário) — coluna de runners com estrelas/poder, retrato central c/ sprite + aura, 8 slots brilhando (4 de cada lado), PODER em destaque, grid de stats, ícones de elemento/passiva/skill/burst, inventário em grade de ícones c/ tooltip no hover e equip em 1 clique
 - [x] **Equipar gear de verdade + inventário organizado** — loadout por runner (⚔🛡💠🔮 + 💍✨📿⛓️ com glow de raridade), stats reais via computeStats, uid por peça, cap 500 (sem apagar nada), reciclar opcional em massa p/ 💎, tudo persistido no save
-- [x] **Acessórios (4 slots novos)** — Anel 💍 CRT/CDG · Brinco ✨ PEN/ACH · Colar 📿 HP/DEF · Pulseira ⛓️ SPD/EVA — 20 peças (5 raridades cada), inventário virou grade de ícones quadrados com tooltip rico (stats, PROC, descrição, reciclar) ao passar o mouse
+- [x] **Acessórios (4 slots novos)** — Anel 💍 CRT/CDG · Brinco ✨ PEN/ACH · Colar 📿 HP/DEF · Pulseira ⛓️ SPD/EVA — 20 peças (5 raridades cada), inventário virou grade de **ícones quadrados com arte própria gerada** (`assets/icons/slot_*.png`) + tooltip rico (stats, PROC, descrição, reciclar) ao passar o mouse; painel sem rolagem geral — **só a grade do inventário rola**, stats sobem p/ preencher o centro
 - [ ] Achievements / conquistas
 - [ ] Balanceamento fino (progressão, drop, dificuldade)
 - [ ] Mais zonas/conteúdo (além das 7 do MVP)

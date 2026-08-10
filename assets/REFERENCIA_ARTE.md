@@ -192,19 +192,28 @@ Fundos de batalha (cenário wide 2:1, sem personagens) em `assets/bg/*.jpg`
 
 ---
 
-## 💍 ÍCONES DE GEAR — slots (sem arte gerada)
+## 💍 ÍCONES DE GEAR — arte por tipo de slot
 
-Os ícones das peças de equipamento (grade do inventário e slots do retrato no
-painel RIFT GEAR) são **emoji estilizados com glow da raridade** (CSS `drop-shadow`
-+ `--rar`) — decisão proposital: leitura instantânea em 26px sem gerar 30+ artes.
+Ícones de item gerados em `assets/icons/slot_*.png` (192×192, fundo azul-marinho
+fechado `#0d1124` combinando com o tile — **sem chroma key**, uso direto
+`object-fit:contain` dentro do tile/slot). Estilo: MOBA item icon, pintura
+anime RPG, silhueta nítida, sem texto/borda.
 
-| Slot | Ícone | Identidade de stats |
-|------|-------|---------------------|
-| weapon | ⚔️ | ATQ / ofensivo |
-| armor | 🛡️ | HP / DEF |
-| core | 💠 | Aether / Burst |
-| relic | 🔮 | PROCS especiais |
-| ring | 💍 | CRT / CDG |
-| earring | ✨ | PEN / ACH |
-| necklace | 📿 | HP / DEF |
-| bracelet | ⛓️ | SPD / EVA |
+| Slot | Arquivo | Arte | Identidade de stats |
+|------|---------|------|---------------------|
+| weapon | slot_weapon.png | katana de energia cyan com veios de raio | ATQ |
+| armor | slot_armor.png | peitoral de cavaleiro c/ runas teal | HP / DEF |
+| core | slot_core.png | orbe aether facetado c/ anéis e fragmentos orbitando | Aether |
+| relic | slot_relic.png | talismã de cristal roxo-dourado c/ correntes | PROC |
+| ring | slot_ring.png | anel dourado c/ gema carmesim | CRT / CDG |
+| earring | slot_earring.png | brinco pendente c/ gota violeta (composição vertical) | PEN / ACH |
+| necklace | slot_necklace.png | colar c/ pingente coração esmeralda | HP / DEF |
+| bracelet | slot_bracelet.png | bracelete cuff c/ espirais de vento azul-celeste | SPD / EVA |
+
+> Prompt padrão de ícone: "Game inventory item icon, stylized anime RPG art:
+> <item>, centered, painted game art style like a MOBA item icon, solid very
+> dark navy blue background #0d1124, no text, no border, icon only, high
+> contrast, crisp silhouette". Pipeline: resize 192×192 -strip (sem key/despill).
+> Fallback automático p/ emoji via `onerror` do `<img>` (slots legados).
+> ⚠️ Composições horizontais (brinco/pulseira) precisam pedir "vertical
+> composition filling the frame" senão a arte sai espremida.

@@ -976,6 +976,12 @@ const GEAR_SLOTS = [
   { id: "bracelet", name: "Pulseiras",  icon: "⛓️" },
 ];
 function slotIcon(s){ return (GEAR_SLOTS.find(g=>g.id===s)||{}).icon || "📦"; }
+/* arte do ícone do slot (assets/icons) — fallback pro emoji se faltar o arquivo */
+function slotIconImg(s, cls, ghost){
+  return `<img class="${cls||'gi-img'}" src="assets/icons/slot_${s}.png?v=${SPRITE_V}" alt="" draggable="false"` +
+    (ghost ? ` style="opacity:.28;filter:grayscale(.9)"` : ``) +
+    ` onerror="this.outerHTML='<span class=&quot;gi-ico&quot;>${(slotIcon(s)||'📦')}</span>'"/>`;
+}
 function slotName(s){ return {weapon:'Burst Weapon',armor:'Rift Armor',core:'Aether Core',relic:'Infinity Relic',ring:'Anel',earring:'Brinco',necklace:'Colar',bracelet:'Pulseira'}[s]||s; }
 function slotShort(s){ return {weapon:'ARMA',armor:'ARMAD.',core:'NÚCLEO',relic:'RELÍQ.',ring:'ANEL',earring:'BRINCO',necklace:'COLAR',bracelet:'PULS.'}[s]||s; }
 /* sprite de skill por runner — usado como ícone no painel */
@@ -1061,12 +1067,12 @@ function panelGear() {
       if (it) {
         const ir = RARITIES[it.rarity];
         return `<button class="gws filled" data-unequip="${sel}:${slotId}" style="--rar:${ir.color}">
-          <span class="gws-ico">${gs.icon}</span><i>${'★'.repeat(ir.stars)}</i>
+          ${slotIconImg(slotId,'gws-img')}<i>${'★'.repeat(ir.stars)}</i>
           ${gearTooltipHTML(it, ir, 'Clique p/ desequipar', false)}
         </button>`;
       }
       return `<button class="gws empty" data-gshow="${slotId}" title="${slotName(slotId)} vazio — clique p/ filtrar o inventário">
-        <span class="gws-ico" style="opacity:.3">${gs.icon}</span><span class="gws-lbl">${slotShort(slotId)}</span>
+        ${slotIconImg(slotId,'gws-img',true)}<span class="gws-lbl">${slotShort(slotId)}</span>
       </button>`;
     };
     h += `<div class="gw-detail" style="--rc:${r.color}">
@@ -1130,7 +1136,7 @@ function panelGear() {
   for (const it of items) {
     const rar = RARITIES[it.rarity];
     h += `<div class="gi" style="--rar:${rar.color}" data-qequip="${it.uid}">
-      <span class="gi-ico">${slotIcon(it.slot)}</span>
+      ${slotIconImg(it.slot)}
       <span class="gi-stars" style="color:${rar.color}">${'★'.repeat(rar.stars)}</span>
       ${it.proc ? `<span class="gi-proc" title="Possui PROC">✦</span>` : ""}
       ${gearTooltipHTML(it, rar, sel ? `Clique p/ equipar em ${RUNNER_BY_ID[sel].name}` : 'Selecione um Runner', true)}
@@ -1173,7 +1179,7 @@ function bindGear() {
     notify(r.n ? `♻ ${r.n} peças recicladas → +${r.total} 💎` : "Nenhuma peça comum/incomum pra reciclar");
     sfxHit(); openPanel("gear");
   });
-  // tooltips: viram p/ dentro quando o ícone está colado na borda da grade
+  // tooltips: viram p/ dentro nas bordas e abrem p/ baixo na 1ª linha visível
   document.querySelectorAll(".gi-grid .gi").forEach(t=>{
     t.addEventListener("mouseenter", ()=>{
       const tip = t.querySelector(".gtip");
@@ -1181,6 +1187,9 @@ function bindGear() {
       if (!tip || !grid || t.offsetLeft === undefined || !grid.clientWidth) return;
       tip.classList.toggle("al-l", t.offsetLeft < 120);
       tip.classList.toggle("al-r", (grid.clientWidth - t.offsetLeft - t.offsetWidth) < 120);
+      const tr = t.getBoundingClientRect ? t.getBoundingClientRect() : null;
+      const gr = grid.getBoundingClientRect ? grid.getBoundingClientRect() : null;
+      tip.classList.toggle("drop", (tr && gr) ? (tr.top - gr.top) < 180 : t.offsetTop < 76);
     });
   });
 }
