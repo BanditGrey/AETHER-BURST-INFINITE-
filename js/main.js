@@ -1002,16 +1002,34 @@ function gearStatChips(it) {
 }
 /* tooltip rico da peça (hover no ícone do inventário ou no slot equipado) */
 function gearTooltipHTML(it, rar, hint, withSalvage) {
-  const stats = gearStatChips(it).map(c=>`<span class="gt-stat">${c}</span>`).join("");
-  return `<div class="gtip">
-    <div class="gt-name" style="color:${rar.color}">${it.name}</div>
-    <div class="gt-meta" style="color:${rar.color}">${'★'.repeat(rar.stars)} <span style="color:var(--muted)">${rar.name} · ${slotName(it.slot)}</span></div>
-    <div class="gt-stats">${stats}</div>
-    ${it.proc ? `<div class="gt-proc">✦ PROC — ${GEAR_PROCS[it.proc] || it.proc}</div>` : ""}
-    ${it.desc ? `<div class="gt-desc">${it.desc}</div>` : ""}
+  const PCT = v => `+${Math.round(v*100)}%`;
+  const ROWS = { hp:'HP', atq:'ATQ', def:'DEF', spd:'SPD', crt:'CRIT', cdg:'CRIT DMG', eva:'EVASÃO', ach:'CARGA AETHER' };
+  const stats = [];
+  for (const k in (it.stats||{})) {
+    const v = it.stats[k];
+    if (ROWS[k]) stats.push(`<span class="gt-stat"><b>${PCT(v)}</b> ${ROWS[k]}</span>`);
+    else if (k === 'pen') stats.push(`<span class="gt-stat"><b>+${Math.round(v)}%</b> PENETRAÇÃO</span>`);
+  }
+  return `<div class="gtip" style="--rar:${rar.color}">
+    <div class="gt-head">
+      <span class="gt-icobox">${slotIconImg(it.slot, 'gt-ico')}</span>
+      <div class="gt-headtxt">
+        <div class="gt-name" style="color:${rar.color}">${it.name}</div>
+        <div class="gt-sub">
+          <span class="gt-stars" style="color:${rar.color}">${'★'.repeat(rar.stars)}</span>
+          <span class="gt-rarchip" style="--rc:${rar.color}">${rar.name.toUpperCase()}</span>
+          <span class="gt-slot">${slotName(it.slot)}</span>
+        </div>
+      </div>
+    </div>
+    <div class="gt-body">
+      ${stats.length ? `<div class="gt-stats">${stats.join('')}</div>` : ''}
+      ${it.proc ? `<div class="gt-proc"><span class="gt-proc-badge">✦ PROC</span><span>${GEAR_PROCS[it.proc] || it.proc}</span></div>` : ''}
+      ${it.desc ? `<div class="gt-desc">“${it.desc}”</div>` : ''}
+    </div>
     <div class="gt-foot">
       <span class="gt-hint">${hint}</span>
-      ${withSalvage ? `<button class="gt-salv" data-salvage="${it.uid}" title="Reciclar">♻ +${SALVAGE_VALUE[it.rarity]||10} 💎</button>` : ""}
+      ${withSalvage ? `<button class="gt-salv" data-salvage="${it.uid}" title="Reciclar esta peça">♻ +${SALVAGE_VALUE[it.rarity]||10} 💎</button>` : ''}
     </div>
   </div>`;
 }

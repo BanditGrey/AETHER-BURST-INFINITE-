@@ -415,17 +415,39 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
 .gtip.drop::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:#0a0e20}
 .gws .gtip::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:#0a0e20}
 .gear-empty{grid-column:1/-1}
-.gt-name{font-family:'Orbitron';font-weight:900;font-size:13px;letter-spacing:.3px}
-.gt-meta{font-size:9px;letter-spacing:.5px;margin:2px 0 7px}
-.gt-stats{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
-.gt-stat{font-family:'Orbitron';font-weight:700;font-size:10px;color:var(--aether);
-  background:rgba(58,255,240,.07);border:1px solid rgba(58,255,240,.25);border-radius:6px;padding:2px 6px}
-.gt-proc{font-family:'Orbitron';font-weight:700;font-size:10px;color:var(--gold);letter-spacing:.4px;
-  background:rgba(255,210,63,.07);border:1px solid rgba(255,210,63,.3);border-radius:6px;
-  padding:3px 7px;margin-bottom:6px;width:fit-content}
-.gt-desc{font-size:11px;color:var(--muted);line-height:1.45;font-style:italic}
-.gt-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;
-  border-top:1px solid var(--line);padding-top:7px}
+/* cabeçalho: arte da peça + nome + raridade com glow da raridade no topo */
+.gtip::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;border-radius:12px 12px 0 0;
+  background:linear-gradient(90deg,transparent,var(--rar,#2a3358),transparent)}
+.gt-head{display:flex;gap:10px;align-items:center;padding-bottom:9px;margin-bottom:9px;
+  border-bottom:1px solid var(--line)}
+.gt-icobox{flex-shrink:0;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(80% 80% at 50% 35%,color-mix(in srgb,var(--rar) 22%,#10162e),#080b1a);
+  border:1px solid color-mix(in srgb,var(--rar) 50%,#1c2440);
+  box-shadow:0 0 12px color-mix(in srgb,var(--rar) 25%,transparent)}
+.gt-ico{width:38px;height:38px;object-fit:contain;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--rar) 60%,transparent))}
+.gt-headtxt{min-width:0}
+.gt-name{font-family:'Orbitron';font-weight:900;font-size:13px;letter-spacing:.3px;line-height:1.2}
+.gt-sub{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-top:4px}
+.gt-stars{font-size:9px;letter-spacing:-1px}
+.gt-rarchip{font-family:'Orbitron';font-weight:700;font-size:8px;letter-spacing:1px;color:var(--rc);
+  border:1px solid color-mix(in srgb,var(--rc) 55%,transparent);border-radius:5px;padding:1px 5px;
+  background:color-mix(in srgb,var(--rc) 10%,transparent)}
+.gt-slot{font-size:9px;color:var(--muted);letter-spacing:.4px}
+/* stats: linhas com destaque no valor */
+.gt-stats{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+.gt-stat{font-family:'Orbitron';font-weight:700;font-size:9px;letter-spacing:.3px;color:var(--muted);
+  background:rgba(58,255,240,.05);border:1px solid rgba(58,255,240,.18);border-radius:6px;padding:4px 7px;
+  display:flex;align-items:center;justify-content:space-between;gap:6px}
+.gt-stat b{color:var(--aether);font-size:10.5px}
+.gt-proc{display:flex;align-items:center;gap:8px;margin-bottom:8px;
+  background:linear-gradient(90deg,rgba(255,200,58,.10),rgba(255,200,58,.03));
+  border:1px solid rgba(255,200,58,.35);border-left:3px solid var(--gold);border-radius:7px;padding:6px 8px}
+.gt-proc-badge{font-family:'Orbitron';font-weight:900;font-size:8.5px;letter-spacing:1px;color:var(--gold);
+  white-space:nowrap;text-shadow:0 0 8px rgba(255,200,58,.5)}
+.gt-proc span:last-child{font-size:10.5px;color:#ffe9a8;line-height:1.35}
+.gt-desc{font-size:10.5px;color:var(--muted);line-height:1.45;font-style:italic;opacity:.9}
+.gt-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;
+  border-top:1px solid var(--line);padding-top:8px}
 .gt-hint{font-size:9px;color:var(--muted);letter-spacing:.3px}
 .gt-salv{font-family:'Orbitron';font-weight:700;font-size:10px;color:var(--gold);cursor:pointer;
   background:rgba(255,210,63,.08);border:1px solid rgba(255,210,63,.35);border-radius:7px;
