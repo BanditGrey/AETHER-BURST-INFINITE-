@@ -119,6 +119,12 @@ Isso garante consistência total entre todos os assets gerados.
 | Mob — Rift Warden "Warden Slam" | `mob_warden_slam.png` | onda pesada de rocha fundida laranja incandescente (256×116) — recolor saturado do Crushing Slam |
 | Mob — Rift Lord "Lord Wrath" | `mob_riftlord_wrath.png` | dardo esmeralda com orbe de energia verde (256×56) — recolor do Surge Cannon |
 
+> ⚡ **Tempestade de raio do Burst (elemento lightning) NÃO é imagem** — é
+> procedural via `FX.lightning()` (polilinha serrilhada por midpoint-
+> displacement + ramos + núcleo branco + clarão na origem e no impacto),
+> renderizada no Canvas e no Pixi. Não procurar/gerar `lightning.png` — esse
+> era justamente o "raio que caía do nada sem asset" (um `FX.beam` reto).
+
 > Nota: os 4 recolors foram derivados com `-modulate` a partir de artes
 > próprias já aprovadas (mesma estética, paleta do inimigo) por limite de
 > geração de imagens da sessão — o estilo permanece consistente.

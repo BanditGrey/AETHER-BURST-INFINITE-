@@ -91,6 +91,7 @@ window.PIXIR = (function () {
       moteG = new PIXI.Graphics();
       unitG = new PIXI.Graphics();
       spriteLayer = new PIXI.Container();
+      spriteLayer.sortableChildren = true;   // zIndex de profundidade por frame
       fxG = new PIXI.Graphics();
       fxSprC = new PIXI.Container();
       textLayer = new PIXI.Container();
@@ -567,6 +568,22 @@ window.PIXIR = (function () {
       fxG.stroke();
     }
     fxG.lineStyle(0);
+    // raios serrilhados (mesma FX.lightning do renderer Canvas)
+    for (const b of FX.bolts) {
+      const t = Math.max(0, b.life / b.maxLife);
+      const flick = 0.6 + 0.4 * Math.sin(b.life * 95);
+      const a = t * flick;
+      const path = (pts) => { fxG.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) fxG.lineTo(pts[i][0], pts[i][1]); fxG.stroke(); };
+      fxG.lineStyle(b.width * 3.2, col(b.color), a * 0.28); path(b.pts);
+      fxG.lineStyle(b.width, col(b.color), a); path(b.pts);
+      fxG.lineStyle(Math.max(1, b.width * 0.4), 0xffffff, a * 0.95); path(b.pts);
+      for (const bp of b.branches) { fxG.lineStyle(Math.max(1, b.width * 0.5), col(b.color), a * 0.8); path(bp); }
+      if (b.flash) {
+        fxG.beginFill(0xffffff, a * 0.35); fxG.drawCircle(b.x2, b.y2, 42); fxG.endFill();
+        fxG.beginFill(col(b.color), a * 0.30); fxG.drawCircle(b.x1, b.y1, 56); fxG.endFill();
+      }
+    }
+    fxG.lineStyle(0);
     // partículas
     for (const p of FX.particles) {
       const a = Math.max(0, p.life / p.maxLife);
@@ -641,15 +658,16 @@ window.PIXIR = (function () {
     drawBG(z);
     drawMotes(z);
 
-    // unidades ordenadas por profundidade (um único Graphics + sprites, redesenha a cada frame)
-    // inimigos primeiro (atrás), runners por cima (nunca sobrepõem)
-    const enemies = [...G.enemies].sort((a, b) => a.y - b.y);
-    const runners = [...G.runners].sort((a, b) => a.y - b.y);
-    const units = [...enemies, ...runners];
+    // unidades ordenadas por profundidade REAL (algoritmo do pintor, y crescente):
+    // inimigos e runners ENTRELAÇADOS — quem está mais à frente (maior y)
+    // cobre quem está atrás, e o zIndex é reatribuído a cada frame (a ordem
+    // de addChild sozinha ficava travada e os inimigos cobriam os runners).
+    const units = [...G.enemies, ...G.runners].sort((a, b) => a.y - b.y);
     unitG.clear();
     // esconde sprites do frame anterior
     for (let i = spriteLayer.children.length - 1; i >= 0; i--) spriteLayer.children[i].visible = false;
-    for (const u of units) {
+    for (let ui = 0; ui < units.length; ui++) {
+      const u = units[ui];
       if (u.kind === 'runner') {
         const spr = drawRunnerUnit(unitG, u);
         if (spr) {
@@ -671,21 +689,27 @@ window.PIXIR = (function () {
           spr.rotation = u.swing * 0.12;                  // inclinação de ataque
           spr.alpha = u.alive ? 1 : 0.35;
           spr.visible = true;
+          spr.zIndex = ui;
           if (!spriteLayer.children.includes(spr)) spriteLayer.addChild(spr);
         }
       } else {
         const spr = drawEnemyUnit(unitG, u);
         if (spr) {
-          const bob = Math.sin(u.bob) * 2;
+          // PÉS PLANTADOS TAMBÉM NOS INIMIGOS: nada de transladar para
+          // cima/baixo (parecia flutuar) — squash & stretch na base.
+          const squash = Math.sin(u.bob) * 0.05;          // ±5% de altura
           const depth = depthScale(u.y);
           const hgt = u.size * 2.4 * depth;      // altura escala com tamanho × profundidade
           const tw = spr.texture.width || 1, th = spr.texture.height || 1;
-          spr.height = hgt;
-          spr.width = hgt * (tw / th);           // mesma âncora de pés dos aliados
+          const wid0 = hgt * (tw / th);
+          spr.height = hgt * (1 + squash);
+          spr.width = wid0 * (1 - squash * 0.6);
           spr.x = u.x;
-          spr.y = u.y + bob;
+          spr.y = u.y;                           // base colada no chão
+          spr.rotation = Math.sin(u.bob) * 0.05; // ginga de marcha
           spr.alpha = u.alive ? 1 : 0.35;
           spr.visible = true;
+          spr.zIndex = ui;
           if (!spriteLayer.children.includes(spr)) spriteLayer.addChild(spr);
         }
       }

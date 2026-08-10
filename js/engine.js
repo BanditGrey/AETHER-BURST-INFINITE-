@@ -905,9 +905,16 @@ function burstVisual(r, el) {
   const cx = ENGAGE_X + 60, cy = GROUND_Y - 70;
   switch (r.element) {
     case "lightning":
+      // tempestade de raios serrilhados caindo sobre a linha inimiga —
+      // cada raio nasce de uma fenda luminosa no alto e explode no chão
       for (let i=0;i<14;i++) {
         const x = 380 + Math.random()*560;
-        setTimeout(()=>{ FX.beam(x, 0, x + (Math.random()-0.5)*60, GROUND_Y, {color: el.color, width: 5+Math.random()*5, life: 0.28}); FX.burst(x, GROUND_Y-40, {count:8,color:el.color,speed:200,life:0.4,size:3}); }, i*40);
+        const ox = x + (Math.random()-0.5)*70;
+        setTimeout(()=>{
+          FX.lightning(ox, -16, x, GROUND_Y - 6, {color: el.color, width: 3.5+Math.random()*2.5, life: 0.26});
+          FX.burst(x, GROUND_Y-40, {count:8,color:el.color,speed:200,life:0.4,size:3});
+          FX.ring(x, GROUND_Y-4, {color:el.color,rMax:54,life:0.3,width:3});
+        }, i*40);
       }
       FX.ring(cx, cy, {color:el.color,rMax:420,life:0.7,width:9,fill:true,fillAlpha:0.3});
       break;

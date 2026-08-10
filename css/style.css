@@ -255,7 +255,15 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
    RIFT GEAR — layout estilo "tela de equipamento" (referência)
    ============================================================ */
 .panel.gear-wide{width:min(1220px,100%);height:min(880px,92vh);overflow:hidden;display:flex;flex-direction:column}
-.gearwrap{display:grid;grid-template-columns:190px minmax(0,1.15fr) minmax(0,1fr);gap:14px;padding:0 20px 16px;flex:1;min-height:0}
+/* elo da corrente de altura: sem flex aqui, o .gearwrap crescia com o conteúdo
+   (bag com 60 itens = 1200px) e estourava o painel — stats sumiam e a bag
+   não rolava */
+.panel.gear-wide #panelContent{flex:1;min-height:0;display:flex;flex-direction:column}
+/* linha ÚNICA limitada: sem o minmax(0,1fr) a linha crescia até a altura do
+   CONTEÚDO da bag (1000px+), estourava o painel, escondia os stats lá embaixo
+   e impedia a grade de rolar (clientHeight == scrollHeight) */
+.gearwrap{display:grid;grid-template-columns:190px minmax(0,1.15fr) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);gap:14px;padding:0 20px 16px;flex:1;min-height:0}
 .gearwrap>*{min-height:0}
 
 /* --- esquerda: lista de runners --- */
@@ -418,13 +426,16 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
 /* o markup do tooltip dentro de tile/slot/skill é só FONTE — nunca exibido no lugar
    (quem exibe é o #gtipFloat, position:fixed, acima de tudo) */
 .gi .gtip,.gws .gtip,.gw-sk .sktip{display:none !important}
-#gtipFloat{position:fixed;z-index:9999}
+#gtipFloat{position:fixed;z-index:9999;pointer-events:none}
 #gtipFloat .gtip,#gtipFloat .sktip{position:static;opacity:1;visibility:visible;transform:none;display:block;
-  width:250px;pointer-events:auto;background:linear-gradient(180deg,#131a36,#0a0e20);
+  width:250px;pointer-events:none;background:linear-gradient(180deg,#131a36,#0a0e20);
   border:1px solid color-mix(in srgb,var(--rar,#3a4570) 60%,#1c2440);border-radius:12px;padding:11px 12px;
   text-align:left;cursor:default;transition:none;
   box-shadow:0 18px 44px rgba(0,0,0,.78),0 0 20px color-mix(in srgb,var(--rar,#3afff0) 16%,transparent);
   animation:gtipIn .13s ease-out}
+/* click-through: o tooltip NUNCA bloqueia o clique num tile — só o botão ♻
+   recebe ponteiro (o listener de hover do #gtipFloat dispara por bubbling) */
+#gtipFloat .gt-salv{pointer-events:auto;cursor:pointer}
 @keyframes gtipIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 #gtipFloat .gtip::after,#gtipFloat .sktip::after{content:'';position:absolute;top:100%;left:var(--arwx,50%);
   transform:translateX(-50%);border:7px solid transparent;border-top-color:#0a0e20}
@@ -476,10 +487,14 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
 
 @media(max-width:1080px){
   .panel.gear-wide{height:min(720px,94vh);max-height:94vh;overflow:hidden}
-  .gearwrap{grid-template-columns:1fr;grid-template-rows:auto auto minmax(0,1fr);overflow:hidden}
-  .gw-runners{flex-direction:row;overflow-x:auto;max-height:none;height:auto;padding-bottom:6px}
+  /* linhas limitadas também no retrato (1.35fr p/ retrato+stats, 1fr p/ bag) */
+  .gearwrap{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1.35fr) minmax(0,1fr);overflow:hidden}
+  .gw-runners{flex-direction:row;overflow-x:auto;max-height:none;height:auto;padding-bottom:6px;flex-shrink:0}
   .gw-runner{min-width:150px}
-  .gw-detail{height:auto;overflow-y:auto;scrollbar-width:none}
+  .gw-detail{height:100%;min-height:0;overflow-y:auto;scrollbar-width:none}
+  .gw-stage{min-height:196px}
+  .gw-portrait{width:150px;height:196px}
+  .gws{width:52px;height:56px}
   .gw-grid.gi-grid{min-height:110px}
 }
 @media(max-width:640px){

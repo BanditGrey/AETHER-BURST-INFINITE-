@@ -163,11 +163,11 @@ function render() {
 
   drawBackground();
 
-  // profundidade: inimigos primeiro (atrás), runners por cima (nunca sobrepõem)
-  const enemies = [...G.enemies].sort((a,b)=> a.y - b.y);
-  for (const e of enemies) drawEnemy(e);
-  const runners = [...G.runners].sort((a,b)=> a.y - b.y);
-  for (const r of runners) drawRunner(r);
+  // profundidade real (algoritmo do pintor): runners e inimigos ENTRELAÇADOS
+  // por y — quem está mais à frente cobre quem está atrás (nada de inimigo
+  // "por cima" do runner só por ser inimigo)
+  const units = [...G.enemies, ...G.runners].sort((a,b)=> a.y - b.y);
+  for (const u of units) { if (u.kind === 'runner') drawRunner(u); else drawEnemy(u); }
 
   // FX (partículas, números, etc.)
   FX.render(ctx);
@@ -250,17 +250,19 @@ function drawBackground() {
   }
   ctx.globalAlpha = 1;
 
-  // silhuetas distantes em parallax lento
+  // silhuetas distantes em parallax — SÓ no fallback de gradiente: com a arte
+  // pintada da zona carregada, os triângulos soltos pareciam placeholders de
+  // árvore deslizando por cima do cenário
   BG.scroll += 0.4 * G.speed;
-  ctx.fillStyle = hexA(z.sky[2]||z.accent, 0.25);
-  for (let i=-1;i<8;i++){
-    const x = ((i*220 - (BG.scroll*0.3)%220) + PLAY_W) % (PLAY_W+220) - 110;
-    drawCrystal(x, GROUND_Y-150, 90, z.accent, 0.10);
-  }
-  ctx.fillStyle = hexA('#000000', 0.3);
-  for (let i=-1;i<5;i++){
-    const x = ((i*340 - (BG.scroll*0.6)%340) + PLAY_W) % (PLAY_W+340) - 170;
-    drawCrystal(x, GROUND_Y-90, 60, z.accent, 0.16);
+  if (!bgimg) {
+    for (let i=-1;i<8;i++){
+      const x = ((i*220 - (BG.scroll*0.3)%220) + PLAY_W) % (PLAY_W+220) - 110;
+      drawCrystal(x, GROUND_Y-150, 90, z.accent, 0.10);
+    }
+    for (let i=-1;i<5;i++){
+      const x = ((i*340 - (BG.scroll*0.6)%340) + PLAY_W) % (PLAY_W+340) - 170;
+      drawCrystal(x, GROUND_Y-90, 60, z.accent, 0.16);
+    }
   }
 
   // chão (gradiente em cache ou sombra sobre a imagem)
@@ -288,10 +290,18 @@ function drawBackground() {
 }
 
 function drawCrystal(x, y, h, color, alpha){
+  // aglomerado de lascas de rift (formação orgânica, não um triângulo liso)
   ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.moveTo(x, y); ctx.lineTo(x-h*0.4,y+h); ctx.lineTo(x+h*0.4,y+h); ctx.closePath();
-  ctx.fill(); ctx.restore();
+  const shard = (sx, sw, sh, tilt) => {
+    ctx.save(); ctx.translate(sx, y); ctx.rotate(tilt);
+    ctx.beginPath();
+    ctx.moveTo(0, -sh); ctx.lineTo(-sw*0.5, 0); ctx.lineTo(sw*0.5, 0); ctx.closePath();
+    ctx.fill(); ctx.restore();
+  };
+  shard(x, h*0.8, h, 0);
+  shard(x - h*0.34, h*0.5, h*0.62, -0.12);
+  shard(x + h*0.36, h*0.44, h*0.5, 0.14);
+  ctx.restore();
 }
 
 /* ---------- Runner (chibi) ---------- */
@@ -462,14 +472,15 @@ function drawEnemy(e) {
   ctx.globalAlpha = e.alive ? 1 : dyingScale;
   ctx.scale(e.alive?1:dyingScale, e.alive?1:dyingScale);
   const sz = e.size;
-  const bob = Math.sin(e.bob)*2;
 
   // sombra
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
   ctx.beginPath(); ctx.ellipse(0,4,sz*0.9,sz*0.28,0,0,Math.PI*2); ctx.fill();
 
-  // congelado overlay antes
-  ctx.translate(0, bob);
+  // squash & stretch em torno dos pés (PÉS PLANTADOS): antes o corpo inteiro
+  // transladava na vertical e o inimigo parecia flutuar deslizando
+  const squash = Math.sin(e.bob)*0.05;
+  ctx.scale(1 - squash*0.6, 1 + squash);
 
   // --- sprite de imagem (se carregou) substitui o corpo vetorial ---
   const eimg = ensureEnemyImg(e);
@@ -1235,7 +1246,9 @@ function gtipShowFor(el) {
     inner.style.setProperty("--arwx", Math.round(r.left + r.width/2 - x) + "px");
 }
 function gtipHide(){ if (GTIP.el) { GTIP.el.style.display = "none"; GTIP.el.innerHTML = ""; } }
-function gtipHideSoon(){ clearTimeout(GTIP.hideT); GTIP.hideT = setTimeout(gtipHide, 120); }
+// 260ms de graça: dá tempo de atravessar do tile até o botão ♻ do tooltip
+// (o miolo do tooltip é click-through, então essa travessia não dispara enter)
+function gtipHideSoon(){ clearTimeout(GTIP.hideT); GTIP.hideT = setTimeout(gtipHide, 260); }
 
 function bindGear() {
   // selecionar runner
@@ -1286,13 +1299,18 @@ function bindGear() {
   if (dragGrid) {
     let dg = null;
     dragGrid.addEventListener("pointerdown", e=>{
-      dg = { y: e.clientY, x: e.clientX, st: dragGrid.scrollTop, sl: dragGrid.scrollLeft, moved: false };
-      try { dragGrid.setPointerCapture(e.pointerId); } catch(_){}
+      dg = { y: e.clientY, x: e.clientX, st: dragGrid.scrollTop, sl: dragGrid.scrollLeft, pid: e.pointerId, moved: false };
+      // ATENÇÃO: nada de setPointerCapture aqui — capturar no pointerdown
+      // retarge o CLICK para a grade e o clique nunca chega no tile (equipar
+      // quebrava). A captura só acontece quando vira arrasto de verdade.
     });
     dragGrid.addEventListener("pointermove", e=>{
       if (!dg) return;
       const dy = e.clientY - dg.y, dx = e.clientX - dg.x;
-      if (!dg.moved && Math.hypot(dx, dy) > 6) { dg.moved = true; dragGrid.classList.add("dragging"); }
+      if (!dg.moved && Math.hypot(dx, dy) > 6) {
+        dg.moved = true; dragGrid.classList.add("dragging");
+        try { dragGrid.setPointerCapture(dg.pid); } catch(_){}
+      }
       if (dg.moved) { dragGrid.scrollTop = dg.st - dy; dragGrid.scrollLeft = dg.sl - dx; }
     });
     const dgEnd = ()=>{
