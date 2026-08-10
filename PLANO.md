@@ -45,8 +45,8 @@ Base gráfica em 2 motores (Canvas + WebGL/Pixi), sprites dos Runners no padrão
 - [x] **Sprites de inimigos e bosses**
 - [x] **Arte de fundo por zona (7 zonas)** — v2 regenerada com plano de chão em perspectiva (anti-flutuação da grade 2×3)
 - [x] **Idle dos Runners com pés plantados** (squash & stretch + inclinação de ataque)
-- [ ] **Sprites de skills (8 Runners + 7 mobs)** ← PRÓXIMO — skill VFX em sprite (projéteis, cortes, ondas) por elemento, substituindo FX 100% procedural; ver inventário no PROGRESSO.html
-- [ ] **UI com cara de jogo** (menus, painéis, transições)
+- [x] **Sprites de skills (8 Runners + 7 mobs)** — 15 artes geradas/derivadas (chroma+despill), integradas via camada `FX.sprite()` no Canvas e no Pixi; ataques de mobs e pulso de morte do Surge também usam sprite
+- [ ] **UI com cara de jogo** (menus, painéis, transições) ← PRÓXIMO
 
 ### FASE 4 — Conteúdo & profundidade (pendente)
 - [ ] Equipar gear de verdade (slots + efeitos aplicados)

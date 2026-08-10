@@ -106,7 +106,7 @@ FX.beam = function (x1, y1, x2, y2, opts) {
    Padrão de asset: assets/skills/{key}.png com alpha (chroma removido),
    trimado, projéteis horizontais apontando para a DIREITA. */
 FX.sprites = [];
-const SKILL_SPRITE_V = "skv1-0810";   // cache-bust dos sprites de skill
+const SKILL_SPRITE_V = "skv2-0810";   // cache-bust dos sprites de skill
 const SKILL_IMGS = {};                // key -> HTMLImageElement (browser) | null
 function skillSpriteUrl(key) { return "assets/skills/" + key + ".png?v=" + SKILL_SPRITE_V; }
 function ensureSkillImg(key) {

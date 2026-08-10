@@ -82,10 +82,16 @@ Isso garante consistência total entre todos os assets gerados.
 > própria: velocidade, rotação, grow, fade-in/out). Renderizados no Canvas
 > e no Pixi/WebGL acima das unidades.
 
-- **Fundo:** chroma verde. ⚠️ O gerador **não garante** `#00FF00` puro —
-  **amostrar a cor do canto** e usar como alvo:
-  `BG=$(convert IMG -format "%[pixel:p{0,0}]" info:)` →
-  `convert IMG -alpha on -fuzz 16% -transparent "$BG" -trim +repage OUT`
+- **Fundo:** chroma verde (ou **magenta `#FF00FF`** quando o efeito em si é
+  verde/esmeralda — ex.: vento do Rex, wrath do Rift Lord). ⚠️ O gerador
+  **não garante** `#00FF00` puro — **amostrar a cor do canto** e usar como alvo.
+- **Pipeline completo (validado no lote 2):** amostrar canto →
+  `convert IMG -alpha on -fuzz 42% -transparent "$BG"` →
+  **despill** (remove halo colorido das bordas: para verde, clamp
+  `G ≤ max(R,B)×1.15+4%`; para magenta, clamp `R,B ≤ G×1.18+5%`,
+  recombinando com o canal alpha) → `-trim +repage` → máx 256px.
+  Fuzz baixo (16%) deixa franja verde/rosa na maioria das artes — o
+  despill + fuzz alto é o que limpa de verdade.
 - **Tamanho:** máx 256px no maior lado; **manter proporção natural** (sem
   forçar quadrado — largura é derivada da altura-alvo no jogo).
 - **Orientação:** projéteis horizontais apontando para a **DIREITA**
@@ -95,10 +101,27 @@ Isso garante consistência total entre todos os assets gerados.
 - **Checagem pós-processamento:** cantos com alpha 0, centro opaco,
   sem franja verde (testar sobre fundo escuro).
 
-| Skill | Arquivo | Descrição gerada |
-|-------|---------|------------------|
-| KAIRO "Volt Fang" ✓ piloto | `assets/skills/kairo_volt_fang.png` | presa de raio azul-ciano em zigue-zague, núcleo branco, fagulhas atrás (256×57) |
-| demais 14 (7 runners + 7 mobs) | pendentes | seguir este padrão |
+| Skill | Arquivo | Descrição |
+|-------|---------|-----------|
+| KAIRO "Volt Fang" ✓ piloto | `kairo_volt_fang.png` | presa de raio azul-ciano em zigue-zague, núcleo branco, fagulhas atrás (256×57) |
+| ZAEL "Crimson Slash Barrage" | `zael_crimson_slash.png` | arco de corte de fogo carmesim, fio incandescente, fagulhas (256×76) |
+| SERAPH "Event Horizon" | `seraph_event_horizon.png` | espiral de vazio violeta com arcos elétricos magenta (256×177) |
+| LYRA "Radiant Strike" | `lyra_radiant_strike.png` | lâmina dourada de luz horizontal, núcleo branco (256×53) |
+| FROST "Glacial Lance Burst" | `frost_glacial_lance.png` | lança de gelo translúcida azul com névoa e cristais (256×64) |
+| NINA "Surge Cannon" | `nina_surge_cannon.png` | orbe elétrico âmbar com cauda de voltagem serrilhada (256×56) |
+| REX "Savage Charge" | `rex_savage_charge.png` | cone de vórtice de vento esmeralda com estrias e lascas (256×148) |
+| SABLE "Shadow Execution" | `sable_shadow_execution.png` | foice/lua crescente de sombra índigo-violeta, fio lavanda (256×94) |
+| Mob — Hollow "Rush Swipe" | `mob_hollow_swipe.png` | três trilhas espectrais paralelas cinza-prata (256×134) |
+| Mob — Brute "Crushing Slam" | `mob_brute_slam.png` | onda de choque de rocha cinza com faíscas laranja (256×116) |
+| Mob — Phantom "Shadow Lunge" | `mob_phantom_lunge.png` | dardo espectral violeta serrilhado com névoa (256×100) |
+| Mob — Surge "Death Pulse" | `mob_surge_pulse.png` | esfera/vórtice de aether turquesa com arcos elétricos (256×177) — recolor do Event Horizon |
+| Mob — Elite "Rift Strike" | `mob_elite_strike.png` | onda navalhada vermelho-magma com núcleo branco (256×53) — recolor do Radiant Strike |
+| Mob — Rift Warden "Warden Slam" | `mob_warden_slam.png` | onda pesada de rocha fundida laranja incandescente (256×116) — recolor saturado do Crushing Slam |
+| Mob — Rift Lord "Lord Wrath" | `mob_riftlord_wrath.png` | dardo esmeralda com orbe de energia verde (256×56) — recolor do Surge Cannon |
+
+> Nota: os 4 recolors foram derivados com `-modulate` a partir de artes
+> próprias já aprovadas (mesma estética, paleta do inimigo) por limite de
+> geração de imagens da sessão — o estilo permanece consistente.
 
 ---
 
