@@ -43,7 +43,7 @@ Base gráfica em 2 motores (Canvas + WebGL/Pixi), sprites dos Runners no padrão
 - [x] Sprites dos Runners (padrão de arte definido e salvo)
 - [x] Sons (WebAudio) + mute
 - [ ] **Sprites de inimigos e bosses** ← PRÓXIMO (maior impacto)
-- [ ] **Arte de fundo por zona (7 zonas)**
+- [x] **Arte de fundo por zona (7 zonas)** — v2 regenerada com plano de chão em perspectiva (anti-flutuação da grade 2×3)
 - [ ] **UI com cara de jogo** (menus, painéis, transições)
 
 ### FASE 4 — Conteúdo & profundidade (pendente)
@@ -92,10 +92,10 @@ Base gráfica em 2 motores (Canvas + WebGL/Pixi), sprites dos Runners no padrão
 ---
 
 ## 🧭 Ordem sugerida para os PRÓXIMOS trabalhos reais
-1. **Sprites dos inimigos** (Hollow, Brute, Phantom, Surge, Elite, Miniboss, Boss) — usando o pipeline de arte validado.
-2. **Integrar sprites de inimigos** no jogo (substituir as formas geométricas).
-3. **Arte de fundo das 7 zonas.**
-4. **UI estilizada.**
+1. ~~**Sprites dos inimigos**~~ ✅ feito.
+2. ~~**Integrar sprites de inimigos**~~ ✅ feito.
+3. ~~**Arte de fundo das 7 zonas**~~ ✅ feito (v2 com plano de chão anti-flutuação).
+4. **UI estilizada.** ← próximo
 
 > Cada frente é acompanhada no `PROGRESSO.html`. Ao marcar itens lá, o gráfico
 > geral atualiza automaticamente.

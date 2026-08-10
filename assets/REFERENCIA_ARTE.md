@@ -76,6 +76,33 @@ Isso garante consistência total entre todos os assets gerados.
 
 ---
 
+## 🌄 CENÁRIOS (fundos das 7 zonas) — padrão ANTI-FLUTUAÇÃO
+
+> Personagens ficam ancorados pelos pés na grade 2×3 (y = 395 / 480 / 565).
+> Para que ninguém pareça "flutuar", TODO fundo de zona segue esta composição:
+
+- **Horizonte reto** atravessando a imagem a ~60% da altura (zona 1280×640).
+- **Plano de chão em perspectiva** ocupando os ~40% inferiores: textura pequena
+  perto do horizonte crescendo até a borda inferior, **contínuo da esquerda à
+  direita — sem buracos, precipícios, obstáculos ou plataformas flutuantes** na
+  área do chão (é onde a grade 2×3 e os inimigos caminham).
+- **Portal/rift dimensional** no terço direito, nascendo do chão (de onde vêm
+  os inimigos).
+- Cenário distante SÓ acima do horizonte. Sem personagens, sem texto.
+- Arquivo final: JPEG 1280×640 (`-resize x640 -gravity center -crop 1280x640+0+0`).
+
+| Zona | Arquivo | Chão / tema |
+|------|---------|-------------|
+| 1 Verdant Rift | `z1_verdant.jpg` | solo musgoso de terra e pedras planas; floresta retorcida teal |
+| 2 Inferno Gate | `z2_inferno.jpg` | planalto de obsidiana rachada com veios de lava; vulcões ao fundo |
+| 3 Frozen Abyss | `z3_frozen.jpg` | placa de gelo lisa com trincas; aurora e mar congelado ao fundo |
+| 4 Storm Circuit | `z4_storm.jpg` | esplanada de placas escuras com circuitos amarelos; torres em ruínas + raios |
+| 5 Void Cathedral | `z5_void.jpg` | mármore negro polido com filetes violeta; catedrais flutuando no fundo |
+| 6 Celestial Spire | `z6_celestial.jpg` | terraço de mármore marfim-dourado com runas; torre sagrada nas nuvens |
+| 7 Core Infinite | `z7_core.jpg` | piso vítreo escuro com veios de aether turquesa; vórtice caótico no céu |
+
+---
+
 ## 👹 INIMIGOS (Rift Entities) — descrições
 
 Mesmo estilo dos Runners (chibi anime, corpo inteiro, fundo verde, uma figura, olhos

@@ -113,7 +113,7 @@ function sfxLevel(){ blip(660,0.1,'sine',0.2); setTimeout(()=>blip(990,0.12,'sin
 /* ---------- Sprites dos runners (Canvas) ---------- */
 const RUNNER_IMGS = {};   // runnerId -> HTMLImageElement (ou null se falhou)
 const SPRITE_BASE = 'assets/runners/';
-const SPRITE_V = 'c70f01f'; // versão para cache-busting dos sprites
+const SPRITE_V = 'bgv2-0810'; // versão para cache-busting dos sprites
 function runnerSpriteUrl(id){ return SPRITE_BASE + id + '.png?v=' + SPRITE_V; }
 function ensureRunnerImg(r) {
   const id = r.id;
@@ -265,10 +265,14 @@ function drawBackground() {
 
   // chão (gradiente em cache ou sombra sobre a imagem)
   if (bgimg) {
-    // véu escuro no chão para dar profundidade
-    const fg = ctx.createLinearGradient(0,GROUND_Y,0,PLAY_H);
-    fg.addColorStop(0, 'rgba(0,0,0,0.25)'); fg.addColorStop(1, 'rgba(2,3,10,0.75)');
-    ctx.fillStyle = fg; ctx.fillRect(0,GROUND_Y,PLAY_W,PLAY_H-GROUND_Y);
+    // véu escuro sobre TODO o plano de chão pintado (da 1ª linha da grade
+    // até a borda inferior) — dá profundidade e unifica os 3 níveis de pés
+    const vy = FORM_Y0 - 10;
+    const fg = ctx.createLinearGradient(0,vy,0,PLAY_H);
+    fg.addColorStop(0, 'rgba(0,0,0,0)');
+    fg.addColorStop(0.35, 'rgba(0,0,0,0.30)');
+    fg.addColorStop(1, 'rgba(2,3,10,0.78)');
+    ctx.fillStyle = fg; ctx.fillRect(0,vy,PLAY_W,PLAY_H-vy);
   } else {
     ctx.fillStyle = bgGradients(z).fg; ctx.fillRect(0,GROUND_Y,PLAY_W,PLAY_H-GROUND_Y);
   }
@@ -300,9 +304,10 @@ function drawRunner(r) {
   const bob = Math.sin(r.bob) * 2;
   const el = ELEMENTS[r.element];
 
-  // sombra
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.beginPath(); ctx.ellipse(0, 2, 22*s, 7, 0, 0, Math.PI*2); ctx.fill();
+  // sombra de contato (proporcional à profundidade — "cola" o personagem no chão)
+  const shw = 30 * depthScale(r.y) * s;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath(); ctx.ellipse(0, 3, shw, shw*0.3, 0, 0, Math.PI*2); ctx.fill();
 
   // aura
   const auraR = (28 + (r.castGlow>0?14:0) + (r.burstReady?10:0)) * s;

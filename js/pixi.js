@@ -217,9 +217,10 @@ window.PIXIR = (function () {
     const a = r.alive ? 1 : 0.25;
     const bw = 18 * s, bh = 26 * s;
 
-    // sombra
-    g.beginFill(0x000000, 0.45 * a);
-    g.drawEllipse(dx, r.y + 2, 22 * s, 7 * s);
+    // sombra de contato (proporcional à profundidade)
+    const shw0 = 30 * depthScale(r.y) * s;
+    g.beginFill(0x000000, 0.5 * a);
+    g.drawEllipse(dx, r.y + 3, shw0, shw0 * 0.3);
 
     // aura
     const auraR = (28 + (r.castGlow > 0 ? 14 : 0) + (r.burstReady ? 10 : 0)) * s;
@@ -320,7 +321,7 @@ window.PIXIR = (function () {
   /* ---------- sprites dos runners (arte PNG) ---------- */
   const runnerSprites = {};   // runnerId -> PIXI.Sprite
   const SPRITE_BASE = 'assets/runners/';
-  const SPRITE_V = 'c70f01f'; // cache-busting dos sprites
+  const SPRITE_V = 'bgv2-0810'; // cache-busting dos sprites
 
   // Carrega o sprite de um runner via PIXI.Assets (ou Texture.from). Fica no
   // cache; se falhar/ausente, o renderer cai para o desenho vetorial (fallback).
@@ -365,9 +366,10 @@ window.PIXIR = (function () {
     const s = r.burstScale || 1;
     const el = ELEMENTS[r.element];
     const a = r.alive ? 1 : 0.25;
-    // sombra
-    g.beginFill(0x000000, 0.45 * a);
-    g.drawEllipse(r.x, r.y + 2, 22 * s, 7 * s);
+  // sombra de contato (proporcional à profundidade — "cola" o personagem no chão)
+  const shw = 30 * depthScale(r.y) * s;
+  g.beginFill(0x000000, 0.5 * a);
+  g.drawEllipse(r.x, r.y + 3, shw, shw * 0.3);
     // aura
     const auraR = (28 + (r.castGlow > 0 ? 14 : 0) + (r.burstReady ? 10 : 0)) * s;
     g.beginFill(col(el.color), (r.burstReady ? 0.3 : 0.15) * a);
