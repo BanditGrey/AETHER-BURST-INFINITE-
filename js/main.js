@@ -113,7 +113,7 @@ function sfxLevel(){ blip(660,0.1,'sine',0.2); setTimeout(()=>blip(990,0.12,'sin
 /* ---------- Sprites dos runners (Canvas) ---------- */
 const RUNNER_IMGS = {};   // runnerId -> HTMLImageElement (ou null se falhou)
 const SPRITE_BASE = 'assets/runners/';
-const SPRITE_V = 'c70f01f'; // versão para cache-busting dos sprites
+const SPRITE_V = 'bgv2-0810'; // versão para cache-busting dos sprites
 function runnerSpriteUrl(id){ return SPRITE_BASE + id + '.png?v=' + SPRITE_V; }
 function ensureRunnerImg(r) {
   const id = r.id;
@@ -265,10 +265,14 @@ function drawBackground() {
 
   // chão (gradiente em cache ou sombra sobre a imagem)
   if (bgimg) {
-    // véu escuro no chão para dar profundidade
-    const fg = ctx.createLinearGradient(0,GROUND_Y,0,PLAY_H);
-    fg.addColorStop(0, 'rgba(0,0,0,0.25)'); fg.addColorStop(1, 'rgba(2,3,10,0.75)');
-    ctx.fillStyle = fg; ctx.fillRect(0,GROUND_Y,PLAY_W,PLAY_H-GROUND_Y);
+    // véu escuro sobre TODO o plano de chão pintado (da 1ª linha da grade
+    // até a borda inferior) — dá profundidade e unifica os 3 níveis de pés
+    const vy = FORM_Y0 - 10;
+    const fg = ctx.createLinearGradient(0,vy,0,PLAY_H);
+    fg.addColorStop(0, 'rgba(0,0,0,0)');
+    fg.addColorStop(0.35, 'rgba(0,0,0,0.30)');
+    fg.addColorStop(1, 'rgba(2,3,10,0.78)');
+    ctx.fillStyle = fg; ctx.fillRect(0,vy,PLAY_W,PLAY_H-vy);
   } else {
     ctx.fillStyle = bgGradients(z).fg; ctx.fillRect(0,GROUND_Y,PLAY_W,PLAY_H-GROUND_Y);
   }
@@ -300,9 +304,10 @@ function drawRunner(r) {
   const bob = Math.sin(r.bob) * 2;
   const el = ELEMENTS[r.element];
 
-  // sombra
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.beginPath(); ctx.ellipse(0, 2, 22*s, 7, 0, 0, Math.PI*2); ctx.fill();
+  // sombra de contato (proporcional à profundidade — "cola" o personagem no chão)
+  const shw = 30 * depthScale(r.y) * s;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath(); ctx.ellipse(0, 3, shw, shw*0.3, 0, 0, Math.PI*2); ctx.fill();
 
   // aura
   const auraR = (28 + (r.castGlow>0?14:0) + (r.burstReady?10:0)) * s;
@@ -320,21 +325,25 @@ function drawRunner(r) {
     ctx.shadowBlur=0;
   }
 
-  ctx.translate(0, bob);
-
   // --- sprite de imagem (se carregou) substitui o corpo vetorial ---
   const rimg = ensureRunnerImg(r);
   if (rimg) {
-    // escala por profundidade: mais à frente (maior y) = maior sprite (perspectiva)
-    const depth = clamp(0.88 + (r.y - (GROUND_Y-44)) / 44 * 0.3, 0.88, 1.18);
-    const hgt = 96 * depth * s;       // altura do sprite em unidades de jogo
-    ctx.drawImage(rimg, -hgt/2, -hgt, hgt, hgt);
-    ctx.rotate(0);
+    // MOVIMENTO COM PÉS PLANTADOS: nenhuma translação vertical — a base do
+    // sprite fica SEMPRE sobre o ponto do slot (zero flutuação). O idle é
+    // uma "respiração" (squash & stretch) em torno da base; no ataque,
+    // leve inclinação para frente em torno dos pés.
+    const depth = depthScale(r.y);
+    const breathe = Math.sin(r.bob) * 0.03;              // ±3% de altura
+    const sy = 1 + breathe, sx = 1 - breathe * 0.6;      // volume aprox. constante
+    const hgt = 96 * depth * s * sy;
+    const wid = 96 * depth * s * ((rimg.width / rimg.height) || 1) * sx;
+    ctx.rotate(r.swing * 0.12);                          // inclinação de ataque (pés fixos)
+    ctx.drawImage(rimg, -wid/2, -hgt, wid, hgt);
     // hit flash sobre o sprite
     if (r.hitFlash > 0) {
       ctx.globalAlpha = (r.hitFlash/0.18)*0.5;
       ctx.fillStyle = '#fff';
-      ctx.fillRect(-hgt/2, -hgt, hgt, hgt);
+      ctx.fillRect(-wid/2, -hgt, wid, hgt);
       ctx.globalAlpha = dying?0.25:1;
     }
     // escudo
@@ -346,6 +355,9 @@ function drawRunner(r) {
     if (!dying) drawUnitLabel(r, true);
     return;
   }
+
+  // (fallback vetorial) mantém a oscilação vertical antiga
+  ctx.translate(0, bob);
 
   // lean on swing
   const lean = r.swing * 0.3;
@@ -462,22 +474,24 @@ function drawEnemy(e) {
   // --- sprite de imagem (se carregou) substitui o corpo vetorial ---
   const eimg = ensureEnemyImg(e);
   if (eimg) {
-    const depth = clamp(0.88 + (e.y - (GROUND_Y-44)) / 44 * 0.3, 0.88, 1.18);
+    const depth = depthScale(e.y);
     const hgt = sz * 2.4 * depth;         // altura do sprite (tamanho × profundidade)
+    // base do sprite ancorada no ponto dos pés, proporção original preservada
+    const wid = hgt * ((eimg.width / eimg.height) || 1);
     ctx.globalAlpha = e.alive ? 1 : Math.max(0, e.dyingTimer/0.5);
-    ctx.drawImage(eimg, -hgt/2, -hgt, hgt, hgt);
+    ctx.drawImage(eimg, -wid/2, -hgt, wid, hgt);
     ctx.globalAlpha = 1;
     // hit flash
     if (e.hitFlash > 0) {
       ctx.globalAlpha = (e.hitFlash/0.18)*0.5;
       ctx.fillStyle = '#fff';
-      ctx.fillRect(-hgt/2, -hgt, hgt, hgt);
+      ctx.fillRect(-wid/2, -hgt, wid, hgt);
       ctx.globalAlpha = 1;
     }
     // frozen
     if (e.frozen > 0) {
       ctx.fillStyle = hexA('#9be3ff',0.4);
-      ctx.fillRect(-hgt/2, -hgt, hgt, hgt);
+      ctx.fillRect(-wid/2, -hgt, wid, hgt);
     }
     ctx.restore();
     // gravity mark ring
@@ -657,6 +671,7 @@ function roundRectPath(x,y,w,h,r){ ctx.beginPath();
    ============================================================ */
 let lastT = performance.now();
 let acc = 0;
+let _lastZone = null, _lastPaused = false;
 function loop(t) {
   let dt = (t - lastT)/1000; lastT = t;
   if (dt > 0.1) dt = 0.1;
@@ -664,7 +679,30 @@ function loop(t) {
   update(dt);
   render();
   updateUI();
+  // wipe cinematográfico ao trocar de zona
+  if (G.zone !== _lastZone) {
+    _lastZone = G.zone;
+    zoneWipe(ZONES[G.zone-1]);
+    sfxLevel();
+  }
+  // overlay de pausa
+  if (!!G.paused !== _lastPaused) {
+    _lastPaused = !!G.paused;
+    $('pauseOv').classList.toggle('hidden', !_lastPaused);
+  }
   requestAnimationFrame(loop);
+}
+
+/* wipe de transição de zona — faixa com nome/energia sobre a arena */
+function zoneWipe(z) {
+  const ov = $('zonewipe'); if (!ov || !z) return;
+  $('zwName').textContent = 'ZONA ' + z.id + ' — ' + z.name.toUpperCase();
+  $('zwSub').textContent = z.energy;
+  ov.style.setProperty('--zwc', z.accent);
+  ov.classList.remove('hidden','run'); void ov.offsetWidth;  // reinicia a animação
+  ov.classList.add('run');
+  clearTimeout(ov._t);
+  ov._t = setTimeout(()=>{ ov.classList.add('hidden'); ov.classList.remove('run'); }, 1550);
 }
 
 /* ============================================================
@@ -752,19 +790,20 @@ function openPanel(view) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
   if (view === 'march') { $('panel-overlay').classList.add('hidden'); return; }
   $('panel-overlay').classList.remove('hidden');
+  $('panel').classList.toggle('gear-wide', view === 'gear');
   const c = $('panelContent');
   if (view === 'squad') c.innerHTML = panelSquad();
   else if (view === 'codex') c.innerHTML = panelCodex();
   else if (view === 'infinity') { c.innerHTML = panelInfinity(); setTimeout(bindCircuit,0); }
-  else if (view === 'gear') c.innerHTML = panelGear();
+  else if (view === 'gear') { c.innerHTML = panelGear(); setTimeout(bindGear, 0); }
   else if (view === 'dungeons') c.innerHTML = panelDungeons();
   else if (view === 'ascension') { c.innerHTML = panelAscension(); setTimeout(bindAscension,0); }
   bindPanel();
 }
 
 function panelSquad() {
-  const slots = ['V1','V2','V3','R1','R2'];
-  let h = `<h2>MONTAR ESQUADRÃO</h2><div class="panel-sub">5 Runners · Vanguard (frente) e Rear Guard (trás). Clique num slot para posicionar.</div>`;
+  const slots = ['S1','S2','S3','S4','S5','S6'];
+  let h = `<h2>MONTAR ESQUADRÃO</h2><div class="panel-sub">6 Runners · formação fixa 2×3 (2 colunas × 3 linhas) no setor esquerdo da arena. Slots 1–2 na 1ª linha, 3–4 na 2ª e 5–6 na 3ª; a coluna 2 (S2/S4/S6) é a linha de frente.</div>`;
   h += `<div class="squad-grid">`;
   for (const id of RUNNERS.map(r=>r.id)) {
     const r = RUNNER_BY_ID[id];
@@ -772,7 +811,7 @@ function panelSquad() {
     const li = G.runnerLevels[id];
     const lvl = li? li.level : 1;
     const inSquadIdx = G.squadIds.indexOf(id);
-    const inSquad = inSquadIdx >= 0 && inSquadIdx < 5;
+    const inSquad = inSquadIdx >= 0 && inSquadIdx < SQUAD_SLOTS;
     // stats aproximados
     const u = makeRunner(id, 0); u.level = lvl; computeStats(u);
     const rar = RARITIES[r.rarity];
@@ -800,14 +839,16 @@ function panelSquad() {
     </div>`;
   }
   h += `</div>`;
-  // formação visual
-  h += `<div style="padding:0 24px 24px"><div style="font-family:Orbitron;font-weight:700;font-size:13px;color:var(--muted);margin-bottom:8px">FORMAÇÃO ATUAL</div>`;
-  h += `<div style="display:flex;gap:20px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:16px;justify-content:center">`;
-  h += `<div style="text-align:center"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">VANGUARD</div><div style="display:flex;gap:8px">`;
-  for (let i=0;i<3;i++){ const id=G.squadIds[i]; h+=formationSlot(id,slots[i]); }
-  h += `</div></div><div style="text-align:center"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">REAR GUARD</div><div style="display:flex;gap:8px">`;
-  for (let i=3;i<5;i++){ const id=G.squadIds[i]; h+=formationSlot(id,slots[i]); }
-  h += `</div></div></div></div>`;
+  // formação visual — grade fixa 2×3 (espelha o layout da arena)
+  h += `<div style="padding:0 24px 24px"><div style="font-family:Orbitron;font-weight:700;font-size:13px;color:var(--muted);margin-bottom:8px">FORMAÇÃO ATUAL — GRADE 2×3 (setor esquerdo da arena)</div>`;
+  h += `<div style="background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:16px">`;
+  h += `<div style="display:grid;grid-template-columns:repeat(2,64px);gap:10px 18px;justify-content:center">`;
+  h += `<div style="text-align:center;font-size:10px;color:var(--muted);font-family:Orbitron;letter-spacing:1px">COLUNA 1<br>RETAGUARDA</div>`;
+  h += `<div style="text-align:center;font-size:10px;color:var(--muted);font-family:Orbitron;letter-spacing:1px">COLUNA 2<br>FRENTE</div>`;
+  for (let i=0;i<SQUAD_SLOTS;i++){ const id=G.squadIds[i]; h+=formationSlot(id,slots[i]); }
+  h += `</div>`;
+  h += `<div style="text-align:center;color:var(--muted);font-size:11px;margin-top:10px">Slots 1–2 na 1ª linha · 3–4 na 2ª · 5–6 na 3ª — cada personagem ancorado pelo ponto dos pés.</div>`;
+  h += `</div></div>`;
   return h;
 }
 function formationSlot(id, label){
@@ -824,17 +865,15 @@ function bindPanel() {
     card.querySelector('[data-slot]')?.addEventListener('click', e=>{
       const act = e.currentTarget.dataset.slot;
       if (act==='add') {
-        const empty = G.squadIds.findIndex((s,i)=>!s || i>=5);
-        // se cheio, substitui o último
-        if (G.squadIds.filter(Boolean).length>=5) G.squadIds[4]=id;
-        else { const idx = G.squadIds.findIndex(s=>!s); G.squadIds[idx>=0?idx:4]=id; }
-        // garante 5 slots
-        while(G.squadIds.length<5) G.squadIds.push(null);
+        // se a grade 2×3 estiver cheia, substitui o último slot (S6)
+        if (G.squadIds.filter(Boolean).length>=SQUAD_SLOTS) G.squadIds[SQUAD_SLOTS-1]=id;
+        else { const idx = G.squadIds.findIndex(s=>!s); G.squadIds[idx>=0?idx:SQUAD_SLOTS-1]=id; }
       } else {
         const idx = G.squadIds.indexOf(id); if(idx>=0) G.squadIds[idx]=null;
       }
-      G.squadIds = G.squadIds.slice(0,5);
-      while(G.squadIds.length<5) G.squadIds.push(null);
+      // garante exatamente os 6 slots da grade
+      G.squadIds = G.squadIds.slice(0,SQUAD_SLOTS);
+      while(G.squadIds.length<SQUAD_SLOTS) G.squadIds.push(null);
       buildSquad(); buildBurstBars(); save();
       $('panelContent').innerHTML = panelSquad(); bindPanel();
     });
@@ -920,23 +959,262 @@ function bindCircuit() {
   });
 }
 
+/* ============================================================
+   RIFT GEAR — painel estilo "tela de equipamento de jogo"
+   (runner ao centro com sprite, slots ao redor, stats, skills;
+   lista de runners à esquerda; inventário em grid à direita)
+   ============================================================ */
+const GEAR_UI = { slot: "all", sort: "rarity", runner: null };
+const GEAR_SLOTS = [
+  { id: "weapon",   name: "Armas",      icon: "⚔️" },
+  { id: "armor",    name: "Armaduras",  icon: "🛡️" },
+  { id: "core",     name: "Núcleos",    icon: "💠" },
+  { id: "relic",    name: "Relíquias",  icon: "🔮" },
+  { id: "ring",     name: "Anéis",      icon: "💍" },
+  { id: "earring",  name: "Brincos",    icon: "✨" },
+  { id: "necklace", name: "Colares",    icon: "📿" },
+  { id: "bracelet", name: "Pulseiras",  icon: "⛓️" },
+];
+function slotIcon(s){ return (GEAR_SLOTS.find(g=>g.id===s)||{}).icon || "📦"; }
+/* arte do ícone do slot (assets/icons, fundo transparente) — ghost = silhueta p/ slot vazio; fallback pro emoji se faltar o arquivo */
+function slotIconImg(s, cls, ghost){
+  return `<img class="${cls||'gi-img'}${ghost ? ' gi-ghost' : ''}" src="assets/icons/slot_${s}.png?v=${SPRITE_V}" alt="" draggable="false"` +
+    ` onerror="this.outerHTML='<span class=&quot;gi-ico&quot;>${(slotIcon(s)||'📦')}</span>'"/>`;
+}
+function slotName(s){ return {weapon:'Burst Weapon',armor:'Rift Armor',core:'Aether Core',relic:'Infinity Relic',ring:'Anel',earring:'Brinco',necklace:'Colar',bracelet:'Pulseira'}[s]||s; }
+function slotShort(s){ return {weapon:'ARMA',armor:'ARMAD.',core:'NÚCLEO',relic:'RELÍQ.',ring:'ANEL',earring:'BRINCO',necklace:'COLAR',bracelet:'PULS.'}[s]||s; }
+/* sprite de skill por runner — usado como ícone no painel */
+const RUNNER_SKILL_SPRITE = {
+  kairo: "kairo_volt_fang", zael: "zael_crimson_slash", seraph: "seraph_event_horizon",
+  lyra: "lyra_radiant_strike", frost: "frost_glacial_lance", nina: "nina_surge_cannon",
+  rex: "rex_savage_charge", sable: "sable_shadow_execution",
+};
+function gearStatChips(it) {
+  // fração (0.10=+10%): hp, atq, def, spd, crt, cdg, eva, ach — pen é em pontos (8 = +8%)
+  const LBL = { atq:"ATQ", hp:"HP", def:"DEF", spd:"SPD", ach:"AETHER", crt:"CRT", cdg:"CDG", eva:"EVA" };
+  const chips = [];
+  for (const k in (it.stats||{})) {
+    const v = it.stats[k];
+    if (LBL[k])       chips.push(`+${Math.round(v*100)}% ${LBL[k]}`);
+    else if (k === "pen") chips.push(`+${Math.round(v)}% PEN`);
+  }
+  return chips;
+}
+/* tooltip rico da peça (hover no ícone do inventário ou no slot equipado) */
+function gearTooltipHTML(it, rar, hint, withSalvage) {
+  const stats = gearStatChips(it).map(c=>`<span class="gt-stat">${c}</span>`).join("");
+  return `<div class="gtip">
+    <div class="gt-name" style="color:${rar.color}">${it.name}</div>
+    <div class="gt-meta" style="color:${rar.color}">${'★'.repeat(rar.stars)} <span style="color:var(--muted)">${rar.name} · ${slotName(it.slot)}</span></div>
+    <div class="gt-stats">${stats}</div>
+    ${it.proc ? `<div class="gt-proc">✦ PROC — ${GEAR_PROCS[it.proc] || it.proc}</div>` : ""}
+    ${it.desc ? `<div class="gt-desc">${it.desc}</div>` : ""}
+    <div class="gt-foot">
+      <span class="gt-hint">${hint}</span>
+      ${withSalvage ? `<button class="gt-salv" data-salvage="${it.uid}" title="Reciclar">♻ +${SALVAGE_VALUE[it.rarity]||10} 💎</button>` : ""}
+    </div>
+  </div>`;
+}
+/* "poder de combate" exibido no retrato — sobe com gear e nível */
+function runnerPower(u) {
+  return Math.round(u.maxHp*0.10 + u.atq*6 + u.def*3 + u.spd*10 + (u.crt*100)*8 + (u.cdg*100)*2 + (u.eva*100)*8 + (u.pen*100)*4 + u.ach*100);
+}
+
 function panelGear() {
   const loot = G._loot || [];
-  let h = `<h2>RIFT GEAR</h2><div class="panel-sub">Equipamentos coletados na marcha e dungeons. ${loot.length} itens no inventário.</div>`;
-  if (!loot.length) { h += `<div style="padding:0 24px 24px;color:var(--muted)">Nenhum equipamento ainda — derrote Elite e Bosses para dropar.</div>`; return h; }
-  h += `<div class="loot-grid">`;
-  for (const it of loot.slice().reverse()) {
-    const rar = RARITIES[it.rarity];
-    h += `<div class="loot-item" style="border-color:${rar.color}">
-      <div class="li-name" style="color:${rar.color}">${it.name} <span style="font-size:10px">${'★'.repeat(rar.stars)}</span></div>
-      <div class="li-desc">${it.desc}</div>
-      <div class="li-desc" style="color:var(--aether);margin-top:4px">${slotName(it.slot)}</div>
-    </div>`;
+  const owned = G.ownedRunners.filter(id => RUNNER_BY_ID[id]);
+  const squad = G.squadIds.slice(0, SQUAD_SLOTS).filter(Boolean);
+  const order = [...squad, ...owned.filter(id => !squad.includes(id))];
+  if (!GEAR_UI.runner || !owned.includes(GEAR_UI.runner)) GEAR_UI.runner = order[0] || null;
+  const sel = GEAR_UI.runner;
+
+  let h = `<h2>RIFT GEAR</h2>
+    <div class="panel-sub">8 slots por Runner — arma, armadura, núcleo, relíquia e os 4 acessórios (anel · brinco · colar · pulseira).
+    Passe o mouse numa peça p/ ver os detalhes, clique p/ equipar. Slots brilhando = preenchidos (clique p/ desequipar). A bag rola com a roda ou arrastando.
+    Inventário: <b>${loot.length}/${LOOT_CAP}</b> — reciclar é opcional e rende 💎.</div>`;
+  h += `<div class="gearwrap">`;
+
+  /* ---------- ESQUERDA: lista de runners ---------- */
+  h += `<div class="gw-runners">`;
+  for (const id of order) {
+    const r = RUNNER_BY_ID[id];
+    const li = G.runnerLevels[id];
+    const rar = RARITIES[r.rarity];
+    const u = makeRunner(id, 0); u.level = li.level; computeStats(u);
+    h += `<button class="gw-runner ${id===sel?'sel':''}" data-gsel="${id}" style="--rc:${r.color}">
+      <img class="gw-ava" src="assets/runners/${id}.png?v=${SPRITE_V}" alt="${r.name}" onerror="this.style.display='none'"/>
+      <span class="gw-ri">
+        <span class="gw-rname">${r.name}</span>
+        <span class="gw-rstars" style="color:${rar.color}">${'★'.repeat(rar.stars)}</span>
+        <span class="gw-rlv">LV ${li.level} · ⚡${formatNumber(runnerPower(u))}</span>
+      </span>
+      ${squad.includes(id)?'<span class="lo-squad-tag">SQUAD</span>':''}
+    </button>`;
   }
   h += `</div>`;
+
+  /* ---------- CENTRO: retrato + slots + stats + skills ---------- */
+  if (sel) {
+    const r = RUNNER_BY_ID[sel];
+    const li = G.runnerLevels[sel];
+    const u = makeRunner(sel, 0); u.level = li.level; computeStats(u);
+    const gear = runnerGear(sel);
+    const rar = RARITIES[r.rarity];
+    const slotBtn = (slotId) => {
+      const it = gear[slotId];
+      const gs = GEAR_SLOTS.find(g=>g.id===slotId);
+      if (it) {
+        const ir = RARITIES[it.rarity];
+        return `<button class="gws filled" data-unequip="${sel}:${slotId}" style="--rar:${ir.color}">
+          ${slotIconImg(slotId,'gws-img')}<i>${'★'.repeat(ir.stars)}</i>
+          ${gearTooltipHTML(it, ir, 'Clique p/ desequipar', false)}
+        </button>`;
+      }
+      return `<button class="gws empty" data-gshow="${slotId}" title="${slotName(slotId)} vazio — clique p/ filtrar o inventário">
+        <span class="gws-socket"></span><span class="gws-lbl">${slotShort(slotId)}</span>
+      </button>`;
+    };
+    h += `<div class="gw-detail" style="--rc:${r.color}">
+      <div class="gw-stage">
+        <div class="gw-slots">${slotBtn('weapon')}${slotBtn('armor')}${slotBtn('ring')}${slotBtn('bracelet')}</div>
+        <div class="gw-portrait">
+          <div class="gw-aura"></div>
+          <img src="assets/runners/${sel}.png?v=${SPRITE_V}" alt="${r.name}" onerror="this.style.display='none'"/>
+        </div>
+        <div class="gw-slots">${slotBtn('core')}${slotBtn('relic')}${slotBtn('necklace')}${slotBtn('earring')}</div>
+      </div>
+      <div class="gw-name">${ELEMENTS[r.element].icon} ${r.name}
+        <span class="gw-stars" style="color:${rar.color}">${'★'.repeat(rar.stars)}</span>
+        <span class="gw-lv">LV ${li.level}</span></div>
+      <div class="gw-titleline">${r.title} · ${r.cls}</div>
+      <div class="gw-power">PODER <b>${formatNumber(runnerPower(u))}</b></div>
+      <div class="gw-stats">
+        <span>❤️ HP <b>${formatNumber(u.maxHp)}</b></span>
+        <span>⚔️ ATQ <b>${formatNumber(u.atq)}</b></span>
+        <span>🛡️ DEF <b>${formatNumber(u.def)}</b></span>
+        <span>💨 SPD <b>${Math.round(u.spd)}</b></span>
+        <span>🎯 CRT <b>${Math.round(u.crt*100)}%</b></span>
+        <span>💥 CDG <b>${Math.round(u.cdg*100)}%</b></span>
+        <span>🌀 EVA <b>${Math.round(u.eva*100)}%</b></span>
+        <span>🔓 PEN <b>${Math.round(u.pen*100)}%</b></span>
+      </div>
+      <div class="gw-skills">
+        <span class="gw-sk" title="Elemento: ${ELEMENTS[r.element].name}">${ELEMENTS[r.element].icon}</span>
+        <span class="gw-sk" title="Passiva — ${r.passive.name}: ${r.passive.desc}">☆</span>
+        <span class="gw-sk img" title="Skill — ${r.skill.name}: ${r.skill.desc}"><img src="assets/skills/${RUNNER_SKILL_SPRITE[sel]}.png?v=${SPRITE_V}" alt=""/></span>
+        <span class="gw-sk" title="Aether Burst — ${r.burst.name}: ${r.burst.desc}">⚡</span>
+      </div>
+    </div>`;
+  }
+
+  /* ---------- DIREITA: inventário ---------- */
+  const counts = { all: loot.length };
+  for (const gs of GEAR_SLOTS) counts[gs.id] = loot.filter(it => it.slot === gs.id).length;
+  h += `<div class="gw-inv">
+    <div class="gear-filters inwrap">
+      ${[["all","Todos","🎒"], ...GEAR_SLOTS.map(gs=>[gs.id, gs.name, gs.icon])].map(([id,name,ico])=>
+        `<button class="gear-tab ${GEAR_UI.slot===id?'active':''}" data-gslot="${id}">${ico} ${name} <span class="gt-count">${counts[id]||0}</span></button>`).join("")}
+      <span class="gear-sortwrap">Ordenar
+        <select id="gearSort">
+          <option value="rarity" ${GEAR_UI.sort==='rarity'?'selected':''}>Raridade</option>
+          <option value="slot" ${GEAR_UI.sort==='slot'?'selected':''}>Tipo</option>
+          <option value="name" ${GEAR_UI.sort==='name'?'selected':''}>Nome</option>
+        </select>
+      </span>
+      <button class="gear-salvage-all" title="Recicla todas as peças Comuns e Incomuns (não-equipadas)">♻ Reciclar comuns+incomuns</button>
+    </div>`;
+
+  let items = loot.filter(it => GEAR_UI.slot === "all" || it.slot === GEAR_UI.slot);
+  const rarRank = r => Object.keys(RARITIES).indexOf(r);
+  if (GEAR_UI.sort === "rarity") items = items.slice().sort((a,b)=> rarRank(b.rarity)-rarRank(a.rarity) || a.name.localeCompare(b.name));
+  else if (GEAR_UI.sort === "slot") items = items.slice().sort((a,b)=> a.slot.localeCompare(b.slot) || rarRank(b.rarity)-rarRank(a.rarity));
+  else items = items.slice().sort((a,b)=> a.name.localeCompare(b.name));
+
+  h += `<div class="gw-grid gi-grid">`;
+  if (!items.length) h += `<div class="gear-empty">Nada aqui ainda — Elites e Bosses dropam gear; dungeons também. 🌀</div>`;
+  for (const it of items) {
+    const rar = RARITIES[it.rarity];
+    h += `<div class="gi" style="--rar:${rar.color}" data-qequip="${it.uid}">
+      ${slotIconImg(it.slot)}
+      <span class="gi-stars" style="color:${rar.color}">${'★'.repeat(rar.stars)}</span>
+      ${it.proc ? `<span class="gi-proc" title="Possui PROC">✦</span>` : ""}
+      ${gearTooltipHTML(it, rar, sel ? `Clique p/ equipar em ${RUNNER_BY_ID[sel].name}` : 'Selecione um Runner', true)}
+    </div>`;
+  }
+  h += `</div></div>`;   /* gw-grid + gw-inv */
+  h += `</div>`;         /* gearwrap */
   return h;
 }
-function slotName(s){ return {weapon:'Burst Weapon',armor:'Rift Armor',core:'Aether Core',relic:'Infinity Relic'}[s]||s; }
+
+function bindGear() {
+  // selecionar runner
+  document.querySelectorAll("[data-gsel]").forEach(b=>b.addEventListener("click", ()=>{
+    GEAR_UI.runner = b.dataset.gsel; openPanel("gear");
+  }));
+  // filtros
+  document.querySelectorAll("[data-gslot]").forEach(b=>b.addEventListener("click", ()=>{ GEAR_UI.slot = b.dataset.gslot; openPanel("gear"); }));
+  const sort = $("gearSort");
+  if (sort) sort.addEventListener("change", ()=>{ GEAR_UI.sort = sort.value; openPanel("gear"); });
+  // slot vazio → filtra o inventário pelo tipo da peça
+  document.querySelectorAll("[data-gshow]").forEach(b=>b.addEventListener("click", ()=>{ GEAR_UI.slot = b.dataset.gshow; openPanel("gear"); }));
+  // equipar com 1 clique no card (ignora o clique que encerra um arraste de scroll)
+  document.querySelectorAll("[data-qequip]").forEach(c=>c.addEventListener("click", ()=>{
+    const g = document.querySelector(".gi-grid");
+    if (g && g._dragMovedAt && Date.now() - g._dragMovedAt < 240) return;
+    if (GEAR_UI.runner && equipItem(GEAR_UI.runner, +c.dataset.qequip)) { sfxLevel(); openPanel("gear"); buildBurstBars(); }
+  }));
+  // desequipar (slot preenchido no retrato)
+  document.querySelectorAll("[data-unequip]").forEach(b=>b.addEventListener("click", ev=>{
+    ev.stopPropagation();
+    const [id, slot] = b.dataset.unequip.split(":");
+    if (unequipItem(id, slot)) { sfxHit(); openPanel("gear"); }
+  }));
+  // reciclar (botão no canto do card — não dispara o equip)
+  document.querySelectorAll("[data-salvage]").forEach(b=>b.addEventListener("click", ev=>{
+    ev.stopPropagation();
+    if (salvageItem(+b.dataset.salvage)) { sfxHit(); openPanel("gear"); }
+  }));
+  const salAll = document.querySelector(".gear-salvage-all");
+  if (salAll) salAll.addEventListener("click", ()=>{
+    const r = salvageWhere(it => it.rarity === "common" || it.rarity === "uncommon");
+    notify(r.n ? `♻ ${r.n} peças recicladas → +${r.total} 💎` : "Nenhuma peça comum/incomum pra reciclar");
+    sfxHit(); openPanel("gear");
+  });
+  // tooltips: viram p/ dentro nas bordas e abrem p/ baixo na 1ª linha visível
+  document.querySelectorAll(".gi-grid .gi").forEach(t=>{
+    t.addEventListener("mouseenter", ()=>{
+      const tip = t.querySelector(".gtip");
+      const grid = t.parentElement;
+      if (!tip || !grid || t.offsetLeft === undefined || !grid.clientWidth) return;
+      tip.classList.toggle("al-l", t.offsetLeft < 120);
+      tip.classList.toggle("al-r", (grid.clientWidth - t.offsetLeft - t.offsetWidth) < 120);
+      const tr = t.getBoundingClientRect ? t.getBoundingClientRect() : null;
+      const gr = grid.getBoundingClientRect ? grid.getBoundingClientRect() : null;
+      tip.classList.toggle("drop", (tr && gr) ? (tr.top - gr.top) < 180 : t.offsetTop < 76);
+    });
+  });
+  // bag: rola com a roda (nativo) E com arrastar o mouse
+  const dragGrid = document.querySelector(".gw-grid.gi-grid");
+  if (dragGrid) {
+    let dg = null;
+    dragGrid.addEventListener("pointerdown", e=>{
+      dg = { y: e.clientY, x: e.clientX, st: dragGrid.scrollTop, sl: dragGrid.scrollLeft, moved: false };
+      try { dragGrid.setPointerCapture(e.pointerId); } catch(_){}
+    });
+    dragGrid.addEventListener("pointermove", e=>{
+      if (!dg) return;
+      const dy = e.clientY - dg.y, dx = e.clientX - dg.x;
+      if (!dg.moved && Math.hypot(dx, dy) > 6) { dg.moved = true; dragGrid.classList.add("dragging"); }
+      if (dg.moved) { dragGrid.scrollTop = dg.st - dy; dragGrid.scrollLeft = dg.sl - dx; }
+    });
+    const dgEnd = ()=>{
+      if (dg && dg.moved) dragGrid._dragMovedAt = Date.now();
+      dragGrid.classList.remove("dragging"); dg = null;
+    };
+    dragGrid.addEventListener("pointerup", dgEnd);
+    dragGrid.addEventListener("pointercancel", dgEnd);
+  }
+}
 
 function panelDungeons() {
   const dungs = [
@@ -1131,12 +1409,26 @@ function boot() {
   bindGlobal();
   openPanel('march');
 
-  // offline report
-  const rep = offlineReport();
-  if (rep) showReport(rep);
+  // wipe/zone watcher começa alinhado com o save carregado
+  _lastZone = G.zone;
 
-  // banner de boas-vindas
-  banner('AETHER BURST: INFINITE', 'Burst Beyond Limits', '#3afff0');
+  // offline report (adiado para depois do splash)
+  const rep = offlineReport();
+
+  // tela de título: o clique de start também libera o áudio (gesto do usuário)
+  // o jogo já roda atrás (marcha idle de fundo)
+  const splash = $('splash');
+  const begin = () => {
+    if (!splash || splash.dataset.done) return;
+    splash.dataset.done = '1';
+    audioInit();
+    splash.classList.add('out');
+    setTimeout(()=>splash.remove(), 620);
+    if (rep) showReport(rep);
+    banner('AETHER BURST: INFINITE', 'Burst Beyond Limits', '#3afff0');
+  };
+  if (splash) $('splashStart').addEventListener('click', begin);
+  else { if (rep) showReport(rep); banner('AETHER BURST: INFINITE', 'Burst Beyond Limits', '#3afff0'); }
 
   requestAnimationFrame(loop);
 }

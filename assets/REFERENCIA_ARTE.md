@@ -76,6 +76,82 @@ Isso garante consistência total entre todos os assets gerados.
 
 ---
 
+## ⚡ SKILL SPRITES (VFX) — padrão
+
+> Efeitos de skill em imagem, integrados pela camada `FX.sprite()` (física
+> própria: velocidade, rotação, grow, fade-in/out). Renderizados no Canvas
+> e no Pixi/WebGL acima das unidades.
+
+- **Fundo:** chroma verde (ou **magenta `#FF00FF`** quando o efeito em si é
+  verde/esmeralda — ex.: vento do Rex, wrath do Rift Lord). ⚠️ O gerador
+  **não garante** `#00FF00` puro — **amostrar a cor do canto** e usar como alvo.
+- **Pipeline completo (validado no lote 2):** amostrar canto →
+  `convert IMG -alpha on -fuzz 42% -transparent "$BG"` →
+  **despill** (remove halo colorido das bordas: para verde, clamp
+  `G ≤ max(R,B)×1.15+4%`; para magenta, clamp `R,B ≤ G×1.18+5%`,
+  recombinando com o canal alpha) → `-trim +repage` → máx 256px.
+  Fuzz baixo (16%) deixa franja verde/rosa na maioria das artes — o
+  despill + fuzz alto é o que limpa de verdade.
+- **Tamanho:** máx 256px no maior lado; **manter proporção natural** (sem
+  forçar quadrado — largura é derivada da altura-alvo no jogo).
+- **Orientação:** projéteis horizontais apontando para a **DIREITA**
+  (ataques aliados); mobs usam `flipX`.
+- **Conteúdo:** UM único efeito por arquivo, centrado, com glow saturado
+  na cor do elemento; sem personagens, mãos, armas ou texto.
+- **Checagem pós-processamento:** cantos com alpha 0, centro opaco,
+  sem franja verde (testar sobre fundo escuro).
+
+| Skill | Arquivo | Descrição |
+|-------|---------|-----------|
+| KAIRO "Volt Fang" ✓ piloto | `kairo_volt_fang.png` | presa de raio azul-ciano em zigue-zague, núcleo branco, fagulhas atrás (256×57) |
+| ZAEL "Crimson Slash Barrage" | `zael_crimson_slash.png` | arco de corte de fogo carmesim, fio incandescente, fagulhas (256×76) |
+| SERAPH "Event Horizon" | `seraph_event_horizon.png` | espiral de vazio violeta com arcos elétricos magenta (256×177) |
+| LYRA "Radiant Strike" | `lyra_radiant_strike.png` | lâmina dourada de luz horizontal, núcleo branco (256×53) |
+| FROST "Glacial Lance Burst" | `frost_glacial_lance.png` | lança de gelo translúcida azul com névoa e cristais (256×64) |
+| NINA "Surge Cannon" | `nina_surge_cannon.png` | orbe elétrico âmbar com cauda de voltagem serrilhada (256×56) |
+| REX "Savage Charge" | `rex_savage_charge.png` | cone de vórtice de vento esmeralda com estrias e lascas (256×148) |
+| SABLE "Shadow Execution" | `sable_shadow_execution.png` | foice/lua crescente de sombra índigo-violeta, fio lavanda (256×94) |
+| Mob — Hollow "Rush Swipe" | `mob_hollow_swipe.png` | três trilhas espectrais paralelas cinza-prata (256×134) |
+| Mob — Brute "Crushing Slam" | `mob_brute_slam.png` | onda de choque de rocha cinza com faíscas laranja (256×116) |
+| Mob — Phantom "Shadow Lunge" | `mob_phantom_lunge.png` | dardo espectral violeta serrilhado com névoa (256×100) |
+| Mob — Surge "Death Pulse" | `mob_surge_pulse.png` | esfera/vórtice de aether turquesa com arcos elétricos (256×177) — recolor do Event Horizon |
+| Mob — Elite "Rift Strike" | `mob_elite_strike.png` | onda navalhada vermelho-magma com núcleo branco (256×53) — recolor do Radiant Strike |
+| Mob — Rift Warden "Warden Slam" | `mob_warden_slam.png` | onda pesada de rocha fundida laranja incandescente (256×116) — recolor saturado do Crushing Slam |
+| Mob — Rift Lord "Lord Wrath" | `mob_riftlord_wrath.png` | dardo esmeralda com orbe de energia verde (256×56) — recolor do Surge Cannon |
+
+> Nota: os 4 recolors foram derivados com `-modulate` a partir de artes
+> próprias já aprovadas (mesma estética, paleta do inimigo) por limite de
+> geração de imagens da sessão — o estilo permanece consistente.
+
+---
+
+## 🌄 CENÁRIOS (fundos das 7 zonas) — padrão ANTI-FLUTUAÇÃO
+
+> Personagens ficam ancorados pelos pés na grade 2×3 (y = 395 / 480 / 565).
+> Para que ninguém pareça "flutuar", TODO fundo de zona segue esta composição:
+
+- **Horizonte reto** atravessando a imagem a ~60% da altura (zona 1280×640).
+- **Plano de chão em perspectiva** ocupando os ~40% inferiores: textura pequena
+  perto do horizonte crescendo até a borda inferior, **contínuo da esquerda à
+  direita — sem buracos, precipícios, obstáculos ou plataformas flutuantes** na
+  área do chão (é onde a grade 2×3 e os inimigos caminham).
+- **Portal/rift dimensional** no terço direito, nascendo do chão (de onde vêm
+  os inimigos).
+- Cenário distante SÓ acima do horizonte. Sem personagens, sem texto.
+- Arquivo final: JPEG 1280×640 (`-resize x640 -gravity center -crop 1280x640+0+0`).
+
+| Zona | Arquivo | Chão / tema |
+|------|---------|-------------|
+| 1 Verdant Rift | `z1_verdant.jpg` | solo musgoso de terra e pedras planas; floresta retorcida teal |
+| 2 Inferno Gate | `z2_inferno.jpg` | planalto de obsidiana rachada com veios de lava; vulcões ao fundo |
+| 3 Frozen Abyss | `z3_frozen.jpg` | placa de gelo lisa com trincas; aurora e mar congelado ao fundo |
+| 4 Storm Circuit | `z4_storm.jpg` | esplanada de placas escuras com circuitos amarelos; torres em ruínas + raios |
+| 5 Void Cathedral | `z5_void.jpg` | mármore negro polido com filetes violeta; catedrais flutuando no fundo |
+| 6 Celestial Spire | `z6_celestial.jpg` | terraço de mármore marfim-dourado com runas; torre sagrada nas nuvens |
+| 7 Core Infinite | `z7_core.jpg` | piso vítreo escuro com veios de aether turquesa; vórtice caótico no céu |
+
+---
+
 ## 👹 INIMIGOS (Rift Entities) — descrições
 
 Mesmo estilo dos Runners (chibi anime, corpo inteiro, fundo verde, uma figura, olhos
@@ -113,3 +189,38 @@ Fundos de batalha (cenário wide 2:1, sem personagens) em `assets/bg/*.jpg`
 
 > Prompt padrão de fundo: cenário 2D side-scroller wide 2:1, sem personagens/UI/texto,
 > portal de rift no lado direito, paleta da zona (ver `ZONES` no `data.js`).
+
+---
+
+## 💍 ÍCONES DE GEAR — arte por tipo de slot
+
+Ícones de item gerados em `assets/icons/slot_*.png` (192×192, **fundo transparente**
+— floodfill chroma key das 4 bordas, ver pipeline abaixo) flutuando dentro do
+tile/slot com `object-fit:contain` + drop-shadow da raridade. Estilo: MOBA item
+icon, pintura anime RPG, silhueta nítida, sem texto/borda.
+Slot vazio é um **socket losango em CSS puro** (`.gws-socket` — quadrado
+rotacionado com gradiente/brilho interno sutil, ilumina no hover). Não usa imagem
+nem emoji — leitura limpa e nada de "quadrado cinza" quando os 8 slots estão vazios.
+
+| Slot | Arquivo | Arte | Identidade de stats |
+|------|---------|------|---------------------|
+| weapon | slot_weapon.png | katana de energia cyan com veios de raio | ATQ |
+| armor | slot_armor.png | peitoral de cavaleiro c/ runas teal | HP / DEF |
+| core | slot_core.png | orbe aether facetado c/ anéis e fragmentos orbitando | Aether |
+| relic | slot_relic.png | talismã de cristal roxo-dourado c/ correntes | PROC |
+| ring | slot_ring.png | anel dourado c/ gema carmesim | CRT / CDG |
+| earring | slot_earring.png | brinco pendente c/ gota violeta (composição vertical) | PEN / ACH |
+| necklace | slot_necklace.png | colar c/ pingente coração esmeralda | HP / DEF |
+| bracelet | slot_bracelet.png | bracelete cuff c/ espirais de vento azul-celeste | SPD / EVA |
+
+> Prompt padrão de ícone: "Game inventory item icon, stylized anime RPG art:
+> <item>, centered, painted game art style like a MOBA item icon, solid very
+> dark navy blue background #0d1124, no text, no border, icon only, high
+> contrast, crisp silhouette". O gerador aplica uma vinheta radial (centro mais
+> claro), então o recorte usa **floodfill fuzz 25% a partir das 4 quinas** com a
+> cor do canto (só remove fundo conectado; não devora detalhe escuro da arte):
+> `-fuzz 25% -fill none -floodfill +0+0 BG -floodfill +(W-1)+0 BG -floodfill
+> +0+(H-1) BG -floodfill +(W-1)+(H-1) BG` → `-trim -bordercolor none -border 6`
+> → resize 192 `-strip`. Fallback automático p/ emoji via `onerror` do `<img>`.
+> ⚠️ Composições horizontais (brinco/pulseira) precisam pedir "vertical
+> composition filling the frame" senão a arte sai espremida.

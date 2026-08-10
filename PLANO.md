@@ -24,7 +24,7 @@ jogo **online** com conta, leaderboard e social — mantendo a cara de jogo de v
 ### FASE 1 — Fundação ✅ (concluída)
 Jogo web jogável de ponta a ponta.
 - [x] Núcleo de combate (alcance, crit, esquiva, elementos)
-- [x] Formação de esquadrão (Vanguard 3 + Rear 2)
+- [x] Formação de esquadrão (grade fixa 2×3 — 6 slots no setor esquerdo, âncora nos pés)
 - [x] Aether Burst + Burst Sync/Resonance
 - [x] Progressão de marcha e zonas
 - [x] Economia (Shards, Tickets, Fragments)
@@ -37,17 +37,23 @@ Jogo web jogável de ponta a ponta.
 - [x] Dungeons
 - [x] Inventário de Gear (coleta/drop)
 
-### FASE 3 — Polimento visual 🚧 (em andamento)
+### FASE 3 — Polimento visual ✅ (concluída)
 Base gráfica em 2 motores (Canvas + WebGL/Pixi), sprites dos Runners no padrão.
 - [x] Render WebGL via PixiJS (opt-in)
 - [x] Sprites dos Runners (padrão de arte definido e salvo)
 - [x] Sons (WebAudio) + mute
-- [ ] **Sprites de inimigos e bosses** ← PRÓXIMO (maior impacto)
-- [ ] **Arte de fundo por zona (7 zonas)**
-- [ ] **UI com cara de jogo** (menus, painéis, transições)
+- [x] **Sprites de inimigos e bosses**
+- [x] **Arte de fundo por zona (7 zonas)** — v2 regenerada com plano de chão em perspectiva (anti-flutuação da grade 2×3)
+- [x] **Idle dos Runners com pés plantados** (squash & stretch + inclinação de ataque)
+- [x] **Sprites de skills (8 Runners + 7 mobs)** — 15 artes geradas/derivadas (chroma+despill), integradas via camada `FX.sprite()` no Canvas e no Pixi; ataques de mobs e pulso de morte do Surge também usam sprite
+- [x] **Números de dano por tipo + efeitos de impacto** — tipos basic/skill/burst/crit/miss/shield/heal, efetividade elemental (▲ super ×1.5 com anel de impacto / ▼ fraco ×0.66 em cinza), dano em runner vermelho; escudos passaram a absorver dano de verdade (bug: shieldHp era só decorativo)
+- [x] **UI com cara de jogo** — tela de título/splash (libera o áudio no clique), wipe cinematográfico ao trocar de zona, overlay de pausa, cards de painel com entrada escalonada, botão ✕ estilizado, chanfros e brilho varrendo
 
 ### FASE 4 — Conteúdo & profundidade (pendente)
-- [ ] Equipar gear de verdade (slots + efeitos aplicados)
+- [x] **Gear PROCS reais** — os 11 efeitos de sabor viraram mecânicas: descarga em cadeia, pós-esquiva ×3, congelar em skill, +2% dano/ataque, Gravity Mark no básico, +10% Burst Sync, cura 15% no Burst, +10% ATQ aliado no Burst, +20% vs debuff, sobreviver c/ 1 HP (1×/combate), Burst +dano por HP; chip ✦PROC no card
+- [x] **Painel Equipar estilo tela de jogo** (referência do usuário) — coluna de runners com estrelas/poder, retrato central c/ sprite + aura, 8 slots brilhando (4 de cada lado; vazio = socket losango entalhado), PODER em destaque, grid de stats que preenche o centro, ícones de elemento/passiva/skill/burst, inventário em grade de ícones **com arte recortada** c/ tooltip no hover, equip em 1 clique, painel sempre contido na tela (sem rolagem geral) e **bag que rola com roda ou arraste**
+- [x] **Equipar gear de verdade + inventário organizado** — loadout por runner (⚔🛡💠🔮 + 💍✨📿⛓️ com glow de raridade), stats reais via computeStats, uid por peça, cap 500 (sem apagar nada), reciclar opcional em massa p/ 💎, tudo persistido no save
+- [x] **Acessórios (4 slots novos)** — Anel 💍 CRT/CDG · Brinco ✨ PEN/ACH · Colar 📿 HP/DEF · Pulseira ⛓️ SPD/EVA — 20 peças (5 raridades cada), inventário virou grade de **ícones quadrados com arte própria gerada** (`assets/icons/slot_*.png`) + tooltip rico (stats, PROC, descrição, reciclar) ao passar o mouse; painel sem rolagem geral — **só a grade do inventário rola**, stats sobem p/ preencher o centro
 - [ ] Achievements / conquistas
 - [ ] Balanceamento fino (progressão, drop, dificuldade)
 - [ ] Mais zonas/conteúdo (além das 7 do MVP)
@@ -85,17 +91,17 @@ Base gráfica em 2 motores (Canvas + WebGL/Pixi), sprites dos Runners no padrão
 - **Modo sombrio / tema por zona** no UI.
 
 ### Visual
-- **Animações de entrada** dos Runners (idle bob melhorado, ataque com sprite).
+- ~~**Animações de entrada** dos Runners~~ ✅ idle refeito: respiração squash & stretch com pés plantados (fim da flutuação) + inclinação de ataque.
 - **Efeito de burst por personagem** mais elaborado (partículas por elemento).
 - **Retratos/emoções** dos Runners em diálogo/codex.
 
 ---
 
 ## 🧭 Ordem sugerida para os PRÓXIMOS trabalhos reais
-1. **Sprites dos inimigos** (Hollow, Brute, Phantom, Surge, Elite, Miniboss, Boss) — usando o pipeline de arte validado.
-2. **Integrar sprites de inimigos** no jogo (substituir as formas geométricas).
-3. **Arte de fundo das 7 zonas.**
-4. **UI estilizada.**
+1. ~~**Sprites dos inimigos**~~ ✅ feito.
+2. ~~**Integrar sprites de inimigos**~~ ✅ feito.
+3. ~~**Arte de fundo das 7 zonas**~~ ✅ feito (v2 com plano de chão anti-flutuação).
+4. **UI estilizada.** ← próximo
 
 > Cada frente é acompanhada no `PROGRESSO.html`. Ao marcar itens lá, o gráfico
 > geral atualiza automaticamente.
