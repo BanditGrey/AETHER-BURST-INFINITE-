@@ -1015,6 +1015,35 @@ function gearTooltipHTML(it, rar, hint, withSalvage) {
     </div>
   </div>`;
 }
+/* fileira de ícones elemento/passiva/skill/burst com tooltip rico (nada de title nativo) */
+function gearSkillRow(r, u, selId) {
+  const el = ELEMENTS[r.element];
+  const names = arr => (arr && arr.length) ? arr.map(x => `${ELEMENTS[x].icon} ${ELEMENTS[x].name}`).join(' · ') : '—';
+  const tip = (inner, type, typeColor, title, body) =>
+    `<span class="gw-sk">
+      ${inner}
+      <div class="sktip">
+        <div class="skt-type" style="--tc:${typeColor}">${type}</div>
+        <div class="skt-title">${title}</div>
+        ${body}
+      </div>
+    </span>`;
+  return `<div class="gw-skills">
+    ${tip(`<i class="gw-sk-emoji" style="--ec:${el.color}">${el.icon}</i>`, 'ELEMENTO', el.color, `${el.icon} ${el.name}`,
+      `<div class="skt-desc">Afinidade elemental do Runner — define a cor do dano básico e as vantagens.</div>
+       <div class="skt-row">▲ Forte: <b>${names(el.strong)}</b></div>
+       <div class="skt-row">▼ Fraco: <b>${names(el.weak)}</b></div>`)}
+    ${tip(`<i class="gw-sk-emoji gold">☆</i>`, 'PASSIVA', '#ffc83a', `☆ ${r.passive.name}`,
+      `<div class="skt-desc">${r.passive.desc}</div>`)}
+    ${tip(`<img class="gw-sk-art" src="assets/skills/${RUNNER_SKILL_SPRITE[selId]}.png?v=${SPRITE_V}" alt=""/>`, 'SKILL', '#4c9bff', r.skill.name,
+      `<img class="skt-banner" src="assets/skills/${RUNNER_SKILL_SPRITE[selId]}.png?v=${SPRITE_V}" alt=""/>
+       <div class="skt-desc">${r.skill.desc}</div>`)}
+    ${tip(`<i class="gw-sk-emoji aether">⚡</i>`, 'AETHER BURST', '#3afff0', `⚡ ${r.burst.name}`,
+      `<div class="skt-desc">${r.burst.desc}</div>
+       <div class="skt-row">Carga de Burst <b>×${(u.ach || 1).toFixed(2)}</b></div>`)}
+  </div>`;
+}
+
 /* "poder de combate" exibido no retrato — sobe com gear e nível */
 function runnerPower(u) {
   return Math.round(u.maxHp*0.10 + u.atq*6 + u.def*3 + u.spd*10 + (u.crt*100)*8 + (u.cdg*100)*2 + (u.eva*100)*8 + (u.pen*100)*4 + u.ach*100);
@@ -1098,12 +1127,7 @@ function panelGear() {
         <span>🌀 EVA <b>${Math.round(u.eva*100)}%</b></span>
         <span>🔓 PEN <b>${Math.round(u.pen*100)}%</b></span>
       </div>
-      <div class="gw-skills">
-        <span class="gw-sk" title="Elemento: ${ELEMENTS[r.element].name}">${ELEMENTS[r.element].icon}</span>
-        <span class="gw-sk" title="Passiva — ${r.passive.name}: ${r.passive.desc}">☆</span>
-        <span class="gw-sk img" title="Skill — ${r.skill.name}: ${r.skill.desc}"><img src="assets/skills/${RUNNER_SKILL_SPRITE[sel]}.png?v=${SPRITE_V}" alt=""/></span>
-        <span class="gw-sk" title="Aether Burst — ${r.burst.name}: ${r.burst.desc}">⚡</span>
-      </div>
+      ${gearSkillRow(r, u, sel)}
     </div>`;
   }
 
