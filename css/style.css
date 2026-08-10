@@ -258,6 +258,126 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
 ::-webkit-scrollbar-track{background:#0a0e22}
 ::-webkit-scrollbar-thumb{background:#2a3358;border-radius:5px}
 
+/* ============================================================
+   FASE 3 — UI COM CARA DE JOGO
+   splash/title screen, wipe de zona, overlay de pausa,
+   polimento de painéis e botões
+   ============================================================ */
+
+/* ---------- SPLASH / TELA DE TÍTULO ---------- */
+#splash{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(120% 90% at 50% 35%,#141b3d 0%,#0a0e22 45%,#05070f 100%);
+  overflow:hidden;transition:opacity .55s ease,filter .55s ease}
+#splash::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(0,0,0,.22) 3px 4px)}
+#splash::after{content:'';position:absolute;left:50%;top:38%;width:640px;height:640px;
+  transform:translate(-50%,-50%);pointer-events:none;
+  background:radial-gradient(circle,rgba(58,255,240,.16),rgba(58,255,240,.05) 40%,transparent 65%);
+  animation:spGlow 2.6s ease-in-out infinite}
+@keyframes spGlow{50%{transform:translate(-50%,-50%) scale(1.12);opacity:.8}}
+#splash.out{opacity:0;filter:blur(6px) brightness(1.6);pointer-events:none}
+.sp-inner{position:relative;text-align:center;z-index:2;padding:20px;
+  animation:spIn .7s cubic-bezier(.2,.8,.3,1.05) both .1s}
+@keyframes spIn{from{opacity:0;transform:translateY(26px) scale(.96)}}
+.sp-logo{font-size:84px;filter:drop-shadow(0 0 34px var(--aether));animation:spLogo 2.2s ease-in-out infinite}
+@keyframes spLogo{50%{filter:drop-shadow(0 0 54px var(--aether));transform:scale(1.05)}}
+.sp-title{font-family:'Orbitron';font-weight:900;font-size:52px;letter-spacing:3px;line-height:1.05;
+  background:linear-gradient(180deg,#fff,#9fd8ff 60%,var(--aether));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 0 44px rgba(58,255,240,.25)}
+.sp-title span{display:block;font-size:30px;letter-spacing:10px;
+  color:var(--aether);-webkit-text-fill-color:var(--aether)}
+.sp-tag{font-family:'Orbitron';font-weight:700;font-size:13px;letter-spacing:9px;color:var(--muted);
+  margin:16px 0 36px;text-transform:uppercase}
+.sp-btn{font-family:'Orbitron';font-weight:900;font-size:17px;letter-spacing:3px;color:#04211f;cursor:pointer;
+  background:linear-gradient(180deg,#9bfff7,var(--aether) 45%,#17b3a6);border:none;padding:16px 46px;border-radius:2px;
+  clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
+  box-shadow:0 8px 30px rgba(58,255,240,.35);transition:.15s;animation:spBtn 1.6s ease-in-out infinite}
+.sp-btn:hover{filter:brightness(1.1);transform:translateY(-2px);box-shadow:0 12px 40px rgba(58,255,240,.55)}
+.sp-btn:active{transform:translateY(0) scale(.98)}
+@keyframes spBtn{50%{box-shadow:0 8px 42px rgba(58,255,240,.6)}}
+.sp-hint{margin-top:24px;font-size:12px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+
+/* ---------- TRANSIÇÃO DE ZONA (wipe cinematográfico) ---------- */
+#zonewipe{position:absolute;inset:0;z-index:8;pointer-events:none;opacity:0;background:rgba(3,6,14,.45)}
+#zonewipe.run{animation:zwFade 1.5s ease-in-out both}
+@keyframes zwFade{0%{opacity:0}18%{opacity:1}72%{opacity:1}100%{opacity:0}}
+#zonewipe .zw-band{position:absolute;left:0;right:0;top:33%;padding:26px 10px;text-align:center;
+  background:rgba(4,8,20,.85);
+  border-top:2px solid var(--zwc,#3afff0);border-bottom:2px solid var(--zwc,#3afff0);
+  box-shadow:0 0 60px rgba(0,0,0,.6),inset 0 0 40px rgba(0,0,0,.5)}
+#zonewipe .zw-band::before{content:'';position:absolute;left:0;right:0;top:-8px;height:3px;
+  background:linear-gradient(90deg,transparent,var(--zwc,#3afff0),transparent);filter:blur(1px);opacity:.9}
+#zonewipe .zw-band::after{content:'';position:absolute;left:0;right:0;bottom:-8px;height:3px;
+  background:linear-gradient(90deg,transparent,var(--zwc,#3afff0),transparent);filter:blur(1px);opacity:.9}
+.zw-name{font-family:'Orbitron';font-weight:900;font-size:34px;letter-spacing:4px;color:#fff;
+  text-shadow:0 0 26px var(--zwc,#3afff0),0 3px 0 rgba(0,0,0,.5)}
+.zw-sub{font-family:'Orbitron';font-weight:700;font-size:13px;letter-spacing:8px;color:var(--zwc,#3afff0);
+  margin-top:8px;text-transform:uppercase}
+#zonewipe.run .zw-name{animation:zwName 1.5s ease-out both}
+@keyframes zwName{0%{opacity:0;transform:scale(.82)}16%{opacity:1;transform:scale(1.04)}26%{transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+#zonewipe.run .zw-sub{animation:zwSub 1.5s ease-out both}
+@keyframes zwSub{0%,8%{opacity:0;letter-spacing:14px}24%{opacity:1;letter-spacing:8px}80%{opacity:1}100%{opacity:0}}
+
+/* ---------- OVERLAY DE PAUSA ---------- */
+#pauseOv{position:absolute;inset:0;z-index:7;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:8px;background:rgba(3,6,14,.5);backdrop-filter:blur(2px);
+  font-family:'Orbitron';font-weight:900;font-size:34px;letter-spacing:8px;color:#fff;
+  text-shadow:0 0 30px var(--aether);pointer-events:none}
+#pauseOv .p-ico{font-size:54px;animation:pulse 1.6s infinite}
+#pauseOv .p-hint{font-family:'Rajdhani';font-weight:700;font-size:13px;letter-spacing:3px;color:var(--muted)}
+
+/* ---------- BOTÃO FECHAR DOS PAINÉIS ---------- */
+.panel-close{position:sticky;top:12px;margin-left:calc(100% - 48px);z-index:3;width:36px;height:36px;
+  border-radius:10px;background:#0a0e22;border:1px solid var(--line);color:var(--muted);
+  font-size:15px;font-weight:700;cursor:pointer;font-family:'Orbitron';transition:.15s;
+  display:flex;align-items:center;justify-content:center}
+.panel-close:hover{color:#fff;border-color:var(--fire);
+  background:linear-gradient(180deg,#ff5a3c,#a01e0e);
+  box-shadow:0 0 16px rgba(255,90,60,.5);transform:scale(1.06)}
+.panel-close:active{transform:scale(.96)}
+
+/* ---------- CANTO ANGULAR DO PAINEL ---------- */
+.panel::after{content:'';position:absolute;top:-1px;right:-1px;width:64px;height:64px;pointer-events:none;
+  background:linear-gradient(225deg,var(--aether) 0 6px,rgba(58,255,240,.25) 6px 9px,transparent 9px);
+  clip-path:polygon(100% 0,0 0,100% 100%);opacity:.7}
+
+/* ---------- CARDS: entrada escalonada ---------- */
+.runner-card,.codex-item,.loot-item{animation:cardIn .4s ease-out both}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px)}}
+.runner-card:nth-child(2),.codex-item:nth-child(2),.loot-item:nth-child(2){animation-delay:.05s}
+.runner-card:nth-child(3),.codex-item:nth-child(3),.loot-item:nth-child(3){animation-delay:.1s}
+.runner-card:nth-child(4),.codex-item:nth-child(4),.loot-item:nth-child(4){animation-delay:.15s}
+.runner-card:nth-child(5),.codex-item:nth-child(5),.loot-item:nth-child(5){animation-delay:.2s}
+.runner-card:nth-child(6),.codex-item:nth-child(6),.loot-item:nth-child(6){animation-delay:.25s}
+.runner-card:nth-child(7),.codex-item:nth-child(7),.loot-item:nth-child(7){animation-delay:.3s}
+.runner-card:nth-child(8),.codex-item:nth-child(8),.loot-item:nth-child(8){animation-delay:.35s}
+.runner-card:nth-child(n+9),.codex-item:nth-child(n+9),.loot-item:nth-child(n+9){animation-delay:.4s}
+
+/* ---------- BOTÕES GRANDES: chanfro + brilho varrendo ---------- */
+.big-btn{border-radius:2px;position:relative;overflow:hidden;
+  clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)}
+.big-btn::after{content:'';position:absolute;top:0;left:-70%;width:45%;height:100%;
+  transform:skewX(-22deg);pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+  transition:left .5s ease}
+.big-btn:hover::after{left:130%}
+
+/* ---------- NAVBAR: ativo com brilho ---------- */
+.nav-btn.active{text-shadow:0 0 12px rgba(58,255,240,.65);box-shadow:inset 0 -2px 0 var(--aether)}
+.nav-btn.active span{transform:scale(1.12);text-shadow:0 0 12px currentColor}
+
+@media(max-width:780px){
+  .sp-title{font-size:32px}
+  .sp-title span{font-size:20px;letter-spacing:6px}
+  .sp-logo{font-size:56px}
+  .sp-btn{font-size:14px;padding:14px 30px}
+  .sp-tag{letter-spacing:5px}
+  .zw-name{font-size:22px}
+  .zw-sub{font-size:10px;letter-spacing:4px}
+  #pauseOv{font-size:22px;letter-spacing:4px}
+}
+
 @media(max-width:780px){
   .brand-text .slogan{display:none}
   .zone-badge{min-width:auto}

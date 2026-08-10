@@ -671,6 +671,7 @@ function roundRectPath(x,y,w,h,r){ ctx.beginPath();
    ============================================================ */
 let lastT = performance.now();
 let acc = 0;
+let _lastZone = null, _lastPaused = false;
 function loop(t) {
   let dt = (t - lastT)/1000; lastT = t;
   if (dt > 0.1) dt = 0.1;
@@ -678,7 +679,30 @@ function loop(t) {
   update(dt);
   render();
   updateUI();
+  // wipe cinematográfico ao trocar de zona
+  if (G.zone !== _lastZone) {
+    _lastZone = G.zone;
+    zoneWipe(ZONES[G.zone-1]);
+    sfxLevel();
+  }
+  // overlay de pausa
+  if (!!G.paused !== _lastPaused) {
+    _lastPaused = !!G.paused;
+    $('pauseOv').classList.toggle('hidden', !_lastPaused);
+  }
   requestAnimationFrame(loop);
+}
+
+/* wipe de transição de zona — faixa com nome/energia sobre a arena */
+function zoneWipe(z) {
+  const ov = $('zonewipe'); if (!ov || !z) return;
+  $('zwName').textContent = 'ZONA ' + z.id + ' — ' + z.name.toUpperCase();
+  $('zwSub').textContent = z.energy;
+  ov.style.setProperty('--zwc', z.accent);
+  ov.classList.remove('hidden','run'); void ov.offsetWidth;  // reinicia a animação
+  ov.classList.add('run');
+  clearTimeout(ov._t);
+  ov._t = setTimeout(()=>{ ov.classList.add('hidden'); ov.classList.remove('run'); }, 1550);
 }
 
 /* ============================================================
@@ -1145,12 +1169,26 @@ function boot() {
   bindGlobal();
   openPanel('march');
 
-  // offline report
-  const rep = offlineReport();
-  if (rep) showReport(rep);
+  // wipe/zone watcher começa alinhado com o save carregado
+  _lastZone = G.zone;
 
-  // banner de boas-vindas
-  banner('AETHER BURST: INFINITE', 'Burst Beyond Limits', '#3afff0');
+  // offline report (adiado para depois do splash)
+  const rep = offlineReport();
+
+  // tela de título: o clique de start também libera o áudio (gesto do usuário)
+  // o jogo já roda atrás (marcha idle de fundo)
+  const splash = $('splash');
+  const begin = () => {
+    if (!splash || splash.dataset.done) return;
+    splash.dataset.done = '1';
+    audioInit();
+    splash.classList.add('out');
+    setTimeout(()=>splash.remove(), 620);
+    if (rep) showReport(rep);
+    banner('AETHER BURST: INFINITE', 'Burst Beyond Limits', '#3afff0');
+  };
+  if (splash) $('splashStart').addEventListener('click', begin);
+  else { if (rep) showReport(rep); banner('AETHER BURST: INFINITE', 'Burst Beyond Limits', '#3afff0'); }
 
   requestAnimationFrame(loop);
 }

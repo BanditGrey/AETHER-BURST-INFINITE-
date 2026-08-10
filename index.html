@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin media="print" onload="this.media='all'">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   <noscript><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
-  <link rel="stylesheet" href="css/style.css?v=grid2x3-07" />
+  <link rel="stylesheet" href="css/style.css?v=ui1-0810" />
 </head>
 <body>
   <div id="app">
@@ -52,6 +52,8 @@
     <main id="stage">
       <canvas id="game"></canvas>
       <div id="banner"></div>
+      <div id="zonewipe" class="hidden"><div class="zw-band"><div class="zw-name" id="zwName"></div><div class="zw-sub" id="zwSub"></div></div></div>
+      <div id="pauseOv" class="hidden"><div class="p-ico">⏸</div><div>PAUSADO</div><div class="p-hint">ESPAÇO para retomar</div></div>
       <button id="compactToggle" title="Modo Companion">{{--}}</button>
     </main>
 
@@ -91,12 +93,23 @@
     </div>
 
     <div id="toast"></div>
+
+    <!-- SPLASH / TELA DE TÍTULO -->
+    <div id="splash">
+      <div class="sp-inner">
+        <div class="sp-logo">⚡</div>
+        <h1 class="sp-title">AETHER BURST<span>: INFINITE</span></h1>
+        <div class="sp-tag">Burst Beyond Limits</div>
+        <button id="splashStart" class="sp-btn">▶ TOCAR PARA COMEÇAR</button>
+        <div class="sp-hint">progresso salvo localmente no navegador</div>
+      </div>
+    </div>
   </div>
 
-  <script src="js/data.js?v=grid2x3-07"></script>
-  <script src="js/fx.js?v=grid2x3-07"></script>
-  <script src="js/engine.js?v=grid2x3-07"></script>
-  <script src="js/pixi.js?v=grid2x3-07"></script>
-  <script src="js/main.js?v=grid2x3-07"></script>
+  <script src="js/data.js?v=ui1-0810"></script>
+  <script src="js/fx.js?v=ui1-0810"></script>
+  <script src="js/engine.js?v=ui1-0810"></script>
+  <script src="js/pixi.js?v=ui1-0810"></script>
+  <script src="js/main.js?v=ui1-0810"></script>
 </body>
 </html>
