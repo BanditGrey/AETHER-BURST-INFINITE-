@@ -6,11 +6,23 @@
 
 /* ---------- Constantes de layout ---------- */
 const PLAY_W = 1280, PLAY_H = 640;
-const GROUND_Y = 478;
-const VANGUARD_X = 330, VANGUARD_Y = [352, 442, 528];
-const REAR_X     = 215, REAR_Y     = [398, 486];
+const GROUND_Y = 478;                 // linha do chão (topo da área de chão)
+// formação em profundidade: cada slot tem posição própria (x, y) ancorada ao chão,
+// com variação de profundidade (mais à frente = mais baixo e mais à direita)
+const VANGUARD_POS = [
+  { x: 300, y: GROUND_Y - 34 },   // vanguard topo (mais ao fundo)
+  { x: 345, y: GROUND_Y - 16 },
+  { x: 395, y: GROUND_Y },        // vanguard frente (mais à frente)
+];
+const REAR_POS = [
+  { x: 205, y: GROUND_Y - 22 },
+  { x: 245, y: GROUND_Y - 4 },
+];
+const VANGUARD_X = 330, VANGUARD_Y = [GROUND_Y - 24, GROUND_Y - 12, GROUND_Y];
+const REAR_X     = 215, REAR_Y     = [GROUND_Y - 18, GROUND_Y];
 const ENGAGE_X   = 452;          // inimigos param um pouco à direita da vanguard
 const SPAWN_X    = 1320;
+const ENEMY_HP_BASE = 220;       // base de HP dos inimigos
 
 /* ---------- SFX shim (main.js sobrescreve no browser; no-op fora dele) ---------- */
 function sfxLevel(){}
@@ -31,7 +43,15 @@ const G = {
   level: 1,
   maxZone: 1,
   maxLevel: 1,
-  rebootCount: 0,
+  // nível da conta — dá Pontos de Ascensão a cada level up (sem reiniciar nada)
+  accountLevel: 1,
+  accountXp: 0,
+  // árvore de passivas (Ascensão): nós desbloqueados + pontos disponíveis
+  ascension: {},          // nodeId -> true
+  ascensionPoints: 0,     // Pontos de Ascensão para gastar
+  // codex: progresso de kills por runner (completar preenche o codex e dá pontos)
+  codex: {},              // runnerId -> kills
+  codexDone: {},          // runnerId -> true
   // esquadrão
   ownedRunners: ["kairo","zael","seraph","lyra","frost","nina","rex","sable"],
   squadIds: ["kairo","zael","rex","frost","nina"],
@@ -69,6 +89,71 @@ function initRunnerLevels() {
 }
 
 /* ============================================================
+   CONTA (Account Level) → fonte de Pontos de Ascensão
+   A conta ganha XP automaticamente na marcha (sem reiniciar nada).
+   Cada level up concede +1 Ponto de Ascensão, gastável na árvore de
+   passivas (substitui o antigo sistema de Reboot).
+   ============================================================ */
+function accountXpNeeded(level) { return Math.round(120 * Math.pow(1.12, level - 1)); }
+
+function addAccountXp(amount) {
+  G.accountXp += amount;
+  let leveled = false;
+  while (G.accountXp >= accountXpNeeded(G.accountLevel)) {
+    G.accountXp -= accountXpNeeded(G.accountLevel);
+    G.accountLevel++;
+    // a cada level up: +1 Ponto de Ascensão (gastável na árvore) + fragments
+    G.ascensionPoints++;
+    const frags = 1 + Math.floor(G.accountLevel / 5);
+    G.infinityFragments += frags;
+    leveled = true;
+    notify('NÍVEL DE CONTA ' + G.accountLevel + ' · +1 Ponto de Ascensão · +' + frags + ' 💠', '#3afff0');
+    sfxLevel();
+  }
+  return leveled;
+}
+
+/* ============================================================
+   RIFT CODEX — preencher as entradas dá Pontos de Ascensão.
+   Cada runner ganha progresso ao abater entidades; ao atingir o
+   requisito de abates, a entrada é completada (uma vez) e premia +1
+   ponto de ascensão.
+   ============================================================ */
+const CODEX_KILL_REQ = 60;   // abates para completar a entrada de um runner
+function gainCodexProgress(runnerId) {
+  if (G.codexDone[runnerId]) return;
+  G.codex[runnerId] = (G.codex[runnerId] || 0) + 1;
+  if (G.codex[runnerId] >= CODEX_KILL_REQ) {
+    G.codexDone[runnerId] = true;
+    G.ascensionPoints++;
+    notify('📖 Codex completo: ' + RUNNER_BY_ID[runnerId].name + ' · +1 Ponto de Ascensão', '#ffd23f');
+  }
+}
+function codexProgress(runnerId) { return G.codex[runnerId] || 0; }
+function codexCompleted(runnerId) { return !!G.codexDone[runnerId]; }
+
+/* Bônus agregados da árvore de Ascensão: soma os efeitos de todos os nós
+   desbloqueados. */
+function ascensionBonuses() {
+  const out = {};
+  for (const id in G.ascension) {
+    if (!G.ascension[id]) continue;
+    const n = ASCENSION_NODES.find(node => node.id === id);
+    if (!n || !n.effect) continue;
+    for (const k in n.effect) out[k] = (out[k] || 0) + n.effect[k];
+  }
+  return out;
+}
+
+/* Combina Infinity Circuit + árvore de Ascensão em um único agregado. */
+function allBonuses() {
+  const out = {};
+  for (const k in infinityBonuses()) out[k] = (out[k] || 0) + infinityBonuses()[k];
+  for (const k in ascensionBonuses()) out[k] = (out[k] || 0) + ascensionBonuses()[k];
+  return out;
+}
+
+/* ============================================================
    CÁLCULO DE STATS
    ============================================================ */
 function computeStats(runnerUnit) {
@@ -76,7 +161,7 @@ function computeStats(runnerUnit) {
   const cls = CLASSES[data.cls];
   const rar = RARITIES[data.rarity];
   const lvl = runnerUnit.level;
-  const inf = infinityBonuses();
+  const inf = allBonuses();
   const b = cls.base;
   const lvHp  = 1 + (lvl - 1) * 0.085;
   const lvAtq = 1 + (lvl - 1) * 0.082;
@@ -196,12 +281,10 @@ function makeRunner(id, slotIndex) {
 }
 
 function positionRunner(u, slotIndex) {
-  // formação: slots 0-2 = vanguard, 3-4 = rear
-  let x, y;
-  const prefs = runnerFormation();
-  if (slotIndex < 3) { x = VANGUARD_X; y = VANGUARD_Y[slotIndex]; u.line = "Vanguard"; }
-  else               { x = REAR_X;     y = REAR_Y[slotIndex - 3]; u.line = "Rear"; }
-  u.homeX = x; u.homeY = y; u.x = x; u.y = y;
+  // formação: slots 0-2 = vanguard, 3-4 = rear — cada slot numa posição própria
+  const p = slotIndex < 3 ? VANGUARD_POS[slotIndex] : REAR_POS[slotIndex - 3];
+  u.line = slotIndex < 3 ? "Vanguard" : "Rear";
+  u.homeX = p.x; u.homeY = p.y; u.x = p.x; u.y = p.y;
 }
 
 /* formação atual: quais ids estão em cada slot (5) */
@@ -214,10 +297,10 @@ function makeEnemy(typeKey, level, isBossScale) {
   const hpGrowth = Math.pow(1.055, lvl - 1);
   const atqGrowth = Math.pow(1.05, lvl - 1);
   const bossMult = isBossScale ? 1 : 1;
-  let hp = t.hp * 220 * hpGrowth * bossMult;
+  let hp = t.hp * ENEMY_HP_BASE * hpGrowth * bossMult;
   let atq = t.atq * 26 * atqGrowth;
-  if (typeKey === "riftlord") { hp = 220 * Math.pow(1.05, lvl - 1) * 9; atq = 30 * Math.pow(1.05, lvl - 1) * 3.2; }
-  if (typeKey === "miniboss") { hp = 220 * Math.pow(1.055, lvl - 1) * 5; atq = 26 * Math.pow(1.05, lvl - 1) * 2.2; }
+  if (typeKey === "riftlord") { hp = ENEMY_HP_BASE * Math.pow(1.05, lvl - 1) * 9; atq = 30 * Math.pow(1.05, lvl - 1) * 3.2; }
+  if (typeKey === "miniboss") { hp = ENEMY_HP_BASE * Math.pow(1.055, lvl - 1) * 5; atq = 26 * Math.pow(1.05, lvl - 1) * 2.2; }
   const lane = Math.floor(Math.random() * 3);
   const e = {
     kind: "enemy",
@@ -232,8 +315,9 @@ function makeEnemy(typeKey, level, isBossScale) {
     isRiftLord: typeKey === "riftlord",
     behavior: t.behavior,
     x: SPAWN_X + Math.random() * 200,
-    y: VANGUARD_Y[lane] + (Math.random() - 0.5) * 16,
-    targetX: ENGAGE_X + (Math.random() - 0.5) * 40,
+    // inimigos usam faixa ampla de profundidade (não só a linha dos vanguard)
+    y: (GROUND_Y - 40) + (Math.random() * 40),
+    targetX: ENGAGE_X + 20 + (Math.random() - 0.5) * 80,
     facing: -1,
     hp, maxHp: hp,
     atq, def: atq * 0.25,
@@ -316,6 +400,13 @@ function nextLevel() {
    ============================================================ */
 function aliveEnemies() { return G.enemies.filter(e => e.alive); }
 function aliveRunners() { return G.runners.filter(r => r.alive); }
+
+/* Inimigos alvo de skills/bursts de área: só os que já estão em campo
+   (spawn concluído) e dentro da zona ativa de combate. Sem isso, as
+   skills nukavam a wave inteira ainda no spawn (fora da tela) e os
+   melee nunca tinham o que atacar. */
+const AOE_REACH = 900;
+function aoeTargets() { return G.enemies.filter(e => e.alive && e.spawnDelay <= 0 && e.x < AOE_REACH); }
 
 /* seleciona alvo para um runner */
 function runnerTarget(r) {
@@ -435,6 +526,8 @@ function killUnit(unit, killer) {
   if (unit.kind === "enemy") {
     G.stats.kills++;
     unit.dyingTimer = 0.5;
+    // codex: o runner que abateu preenche a entrada — completar dá +1 Ponto de Ascensão
+    if (killer && killer.kind === "runner") gainCodexProgress(killer.id);
     // surge: onda ao morrer
     if (unit.typeKey === "surge" && !unit.surged) {
       unit.surged = true;
@@ -443,13 +536,15 @@ function killUnit(unit, killer) {
         if (Math.abs(r.x - unit.x) < 130) dealDamage({ element: "aether", atq: unit.atq*0.5, cdg:1.4, crt:0, pen:0 }, r, unit.atq*0.5, { noMiss:false, color:"#3afff0" });
       }
     }
-    // recompensas
-    const shards = Math.round((unit.isBoss ? 1200 : 14) * Math.pow(1.04, G.level));
+    // recompensas (bônus de Conta + Infinity)
+    const bon = allBonuses();
+    const shards = Math.round((unit.isBoss ? 1200 : 14) * Math.pow(1.04, G.level) * (1 + (bon.shards || 0)));
     G.shards += shards;
-    const xp = (unit.isBoss ? 60 : 4) * Math.pow(1.03, G.level);
+    const xp = (unit.isBoss ? 60 : 4) * Math.pow(1.03, G.level) * (1 + (bon.xp || 0));
     distributeXp(xp);
+    addAccountXp(xp);
     // drop de equipamento
-    const dropChance = (unit.isBoss ? 1 : 0.06) * (1 + (infinityBonuses().drop || 0));
+    const dropChance = (unit.isBoss ? 1 : 0.06) * (1 + (bon.drop || 0));
     if (Math.random() < dropChance) rollDrop();
     if (unit.isRiftLord) { G.stats.bosses++; bossDeathCinematic(unit); sfxBoss(); }
     // explosão de morte
@@ -517,7 +612,7 @@ function useSkill(r) {
   switch (r.id) {
     case "kairo": { // Volt Fang — avança batendo em todos
       FX.beam(r.x, r.y - 24, ENGAGE_X + 120, r.y - 24, { color: el.color, width: 7, life: 0.3 });
-      for (const e of aliveEnemies()) dealDamage(r, e, r.atq * 1.4, { color: el.glow });
+      for (const e of aoeTargets()) dealDamage(r, e, r.atq * 1.4, { color: el.glow });
       break;
     }
     case "zael": { // Crimson Slash Barrage — 5 cortes no alvo de maior HP
@@ -532,7 +627,7 @@ function useSkill(r) {
     case "seraph": { // Event Horizon — puxa e explode
       const cx = ENGAGE_X + 40, cy = GROUND_Y - 60;
       FX.ring(cx, cy, { color: el.color, rMax: 200, life: 0.6, width: 6, fill: true, fillAlpha: 0.3 });
-      for (const e of aliveEnemies()) {
+      for (const e of aoeTargets()) {
         e.x += (cx - e.x) * 0.4; e.targetX = cx;
         dealDamage(r, e, r.atq * 1.5, { color: el.glow });
         e.gravityMark = 4;
@@ -541,11 +636,11 @@ function useSkill(r) {
     }
     case "lyra": { // Radiant Strike — feixe que atravessa todos
       FX.beam(r.x, r.y - 24, PLAY_W, r.y - 24, { color: el.color, width: 10, life: 0.4 });
-      for (const e of aliveEnemies()) dealDamage(r, e, r.atq * 1.3, { color: el.glow });
+      for (const e of aoeTargets()) dealDamage(r, e, r.atq * 1.3, { color: el.glow });
       break;
     }
     case "frost": { // Glacial Lance Burst — leque em 3 inimigos
-      const enemies = aliveEnemies().slice(0, 3);
+      const enemies = aoeTargets().slice(0, 3);
       for (const e of enemies) {
         FX.beam(r.x, r.y - 24, e.x, e.y - 20, { color: el.color, width: 5, life: 0.3 });
         dealDamage(r, e, r.atq * 1.2, { color: el.glow });
@@ -555,12 +650,12 @@ function useSkill(r) {
     }
     case "nina": { // Surge Cannon — raio que atravessa a linha
       FX.beam(r.x, r.y - 24, PLAY_W, r.y - 24, { color: el.color, width: 8, life: 0.35 });
-      for (const e of aliveEnemies()) dealDamage(r, e, r.atq * 1.25, { color: el.glow });
+      for (const e of aoeTargets()) dealDamage(r, e, r.atq * 1.25, { color: el.glow });
       break;
     }
     case "rex": { // Savage Charge — empurra inimigos para trás
       FX.ring(ENGAGE_X + 40, GROUND_Y - 50, { color: el.color, rMax: 180, life: 0.4, width: 5 });
-      for (const e of aliveEnemies()) {
+      for (const e of aoeTargets()) {
         if (e.x < ENGAGE_X + 200) { e.targetX += 60; e.x += 50; dealDamage(r, e, r.atq * 1.1, { color: el.glow }); }
       }
       break;
@@ -609,7 +704,7 @@ function fireBurst(r) {
   r.burstScale = 2.2;
 
   // dano massivo em todos os inimigos + tema visual
-  const enemies = aliveEnemies();
+  const enemies = aoeTargets();
   burstVisual(r, el);
   const dmgPer = r.atq * (6 + (r.level) * 0.05);
   setTimeout(()=>{}, 0);
@@ -624,7 +719,7 @@ function fireBurst(r) {
   // efeitos especiais por burst
   switch (r.id) {
     case "nina": // pulsos contínuos
-      for (let p=0;p<5;p++) setTimeout(()=>{ if(G) FX.ring(ENGAGE_X+60, GROUND_Y-70, {color:el.color,rMax:260,life:0.6,width:6}); for(const e of aliveEnemies()) if(e.alive&&Math.random()<0.7) dealDamage(r,e,r.atq*0.8,{color:el.glow}); }, 300+p*350);
+      for (let p=0;p<5;p++) setTimeout(()=>{ if(G) FX.ring(ENGAGE_X+60, GROUND_Y-70, {color:el.color,rMax:260,life:0.6,width:6}); for(const e of aoeTargets()) if(e.alive&&Math.random()<0.7) dealDamage(r,e,r.atq*0.8,{color:el.glow}); }, 300+p*350);
       break;
     case "frost":
       for (const e of enemies) e.frozen = Math.max(e.frozen, 1.2);
@@ -666,7 +761,7 @@ function burstVisual(r, el) {
       FX.ring(cx,cy,{color:el.color,rMax:400,life:0.6,width:8,fill:true,fillAlpha:0.35});
       break;
     case "ice":
-      for(const e of aliveEnemies()){ setTimeout(()=>{ FX.burst(e.x, e.y, {count:18,color:el.color,speed:240,life:0.6,size:5,dir:-Math.PI/2,spread:1.6,gravity:200,shape:"shard"}); FX.ring(e.x,e.y-20,{color:el.color,rMax:90,life:0.4,width:4}); }, 100); }
+      for(const e of aoeTargets()){ setTimeout(()=>{ FX.burst(e.x, e.y, {count:18,color:el.color,speed:240,life:0.6,size:5,dir:-Math.PI/2,spread:1.6,gravity:200,shape:"shard"}); FX.ring(e.x,e.y-20,{color:el.color,rMax:90,life:0.4,width:4}); }, 100); }
       break;
     case "wind":
       FX.ring(VANGUARD_X+20, GROUND_Y-50, {color:el.color,rMax:380,life:0.7,width:9,fill:true,fillAlpha:0.3});
@@ -737,7 +832,7 @@ function fireBurstSync(pair, ra, rb) {
   FX.slowmoFor(0.9);
   ra.burstScale = 2.4; rb.burstScale = 2.4;
 
-  const enemies = aliveEnemies();
+  const enemies = aoeTargets();
   const dmg = (ra.atq + rb.atq) * 8;
   // feixe combinado entre os dois runners
   FX.beam(ra.x, ra.y-24, rb.x, rb.y-24, {color:pair.colorA,width:10,life:0.5});
@@ -820,8 +915,8 @@ function update(dt) {
     if (e.slowPct > 0) { spd *= (1 - e.slowPct); e.slowPct = Math.max(0, e.slowPct - dt*0.08); }
     if (e.frozen > 0) { e.frozen -= dt; spd = 0; }
     if (e.stunned > 0) { e.stunned -= dt; spd = 0; }
-    // movimento até linha de engajamento
-    const marchSpd = (spd/100) * 70;
+    // movimento até linha de engajamento (velocidade de marcha)
+    const marchSpd = (spd/100) * 105;
     if (e.x > e.targetX) e.x -= marchSpd * dt;
     // ataque
     if (spd > 0) {
@@ -878,22 +973,33 @@ function update(dt) {
         r.alive = true; r.hp = Math.round(r.maxHp * 0.6); r.burstEnergy = 0; r.burstReady = false;
         r.x = r.homeX; r.y = r.homeY;
         FX.burst(r.x, r.y-20, {count:16,color:r.color,speed:160,life:0.5,size:3});
-        FX.floatText(r.x, r.y-60, "REBOOT", {color:r.accent,size:16});
+        FX.floatText(r.x, r.y-60, "REVIVE", {color:r.accent,size:16});
       }
       continue;
     }
 
-    // regenera levemente (idle)
-    r.hp = Math.min(r.maxHp, r.hp + r.maxHp * 0.01 * dt);
+    // regenera levemente (idle) — sem anular o dano que os inimigos causam
+    r.hp = Math.min(r.maxHp, r.hp + r.maxHp * 0.004 * dt);
 
-    // ataque básico
+    // ataque básico (com alcance — melee avança até o alvo)
     r.attackTimer -= dt;
     if (r.attackTimer <= 0 && r.burstCd <= 0.1) {
       const tgt = runnerTarget(r);
       if (tgt) {
-        r.attackTimer = r.attackInterval;
-        basicAttack(r, tgt);
-        // passiva Phantom Step (Sable): garante crit após esquiva — aproximamos com chance ao evadir (skip)
+        const dist = tgt.x - r.x;
+        const inRange = dist <= (r.range + 30) && dist > -20;
+        if (inRange) {
+          r.attackTimer = r.attackInterval;
+          basicAttack(r, tgt);
+          // passiva Phantom Step (Sable): garante crit após esquiva — aproximamos com chance ao evadir (skip)
+        } else if (r.range <= 120) {
+          // melee fora de alcance: avança em direção ao alvo
+          r.x += Math.sign(dist || 1) * 110 * dt;
+          r.attackTimer = 0.05;
+        } else {
+          // ranged fora de alcance: mantém a linha e espera o alvo se aproximar
+          r.attackTimer = 0.3;
+        }
       } else {
         r.attackTimer = 0.3;
       }
@@ -914,8 +1020,10 @@ function update(dt) {
     } else if (!r.burstReady) {
       r.burstHold = 0;
     }
-    // pequena variação de posição (aceno de marcha)
-    r.x += (r.homeX - r.x) * Math.min(1, dt*8);
+    // marcha: mantém posição em combate (melee já avançou) e volta ao posto quando a wave acaba
+    const hasEnemies = aliveEnemies().length > 0;
+    if (!hasEnemies) r.x += (r.homeX - r.x) * Math.min(1, dt*6);
+    else r.x = Math.min(ENGAGE_X - 20, Math.max(r.homeX, r.x));
     r.y += (r.homeY - r.y) * Math.min(1, dt*8);
   }
 
@@ -1023,9 +1131,11 @@ function save() {
   G.lastSeen = Date.now();
   const data = {
     shards: G.shards, riftTickets: G.riftTickets, infinityFragments: G.infinityFragments,
-    zone: G.zone, level: G.level, maxZone: G.maxZone, maxLevel: G.maxLevel, rebootCount: G.rebootCount,
+    zone: G.zone, level: G.level, maxZone: G.maxZone, maxLevel: G.maxLevel, accountLevel: G.accountLevel, accountXp: G.accountXp,
     ownedRunners: G.ownedRunners, squadIds: G.squadIds, runnerLevels: G.runnerLevels,
     resonance: G.resonance, infinity: G.infinity, lastSeen: G.lastSeen, stats: G.stats,
+    ascension: G.ascension, ascensionPoints: G.ascensionPoints,
+    codex: G.codex, codexDone: G.codexDone,
     loot: G._loot || [],
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch(e){}
@@ -1037,6 +1147,11 @@ function load() {
     const d = JSON.parse(raw);
     Object.assign(G, d);
     G._loot = d.loot || [];
+    // normaliza saves antigos que não têm os campos novos
+    if (!G.ascension) G.ascension = {};
+    if (!G.ascensionPoints) G.ascensionPoints = 0;
+    if (!G.codex) G.codex = {};
+    if (!G.codexDone) G.codexDone = {};
     return true;
   } catch(e){ return false; }
 }
@@ -1049,7 +1164,7 @@ function offlineReport() {
   buildSquad();
   let dps = 0;
   for (const r of G.runners) dps += r.atq * (r.spd/100) * 2;
-  const eff = 0.6 + (infinityBonuses().offline||0);
+  const eff = 0.6 + (allBonuses().offline || 0);
   const shards = Math.round(dps * elapsed * 0.5 * eff);
   const xp = Math.round(dps * elapsed * 0.2 * eff);
   const kills = Math.round(dps * elapsed * 0.02);
@@ -1057,6 +1172,7 @@ function offlineReport() {
   // aplica
   G.shards += shards;
   distributeXp(xp);
+  addAccountXp(xp);
   G.stats.kills += kills; G.stats.bursts += bursts;
   // drop simulado
   const drops = [];

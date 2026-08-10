@@ -9,13 +9,82 @@ const ctx = canvas.getContext('2d');
 let DPR = Math.min(2, window.devicePixelRatio || 1);
 let viewScale = 1, viewOffX = 0, viewOffY = 0;
 
+/* ---------- Câmera (zoom + pan) ---------- */
+// CAM é compartilhado com o renderer Pixi (window.CAM). zoom >= 1; x/y =
+// ponto do mundo (coords PLAY_W/PLAY_H) que fica no centro da tela.
+const CAM = window.CAM = { zoom: 1, x: PLAY_W / 2, y: PLAY_H / 2 };
+function camReset() { CAM.zoom = 1; CAM.x = PLAY_W / 2; CAM.y = PLAY_H / 2; }
+function clampZoom(z) { return Math.min(6, Math.max(1, z)); }
+function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+
+function setupCamera() {
+  const el = document.getElementById('stage'); // envolve canvas e view Pixi
+  // zoom pela roda do mouse, centrado no cursor
+  el.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    const rect = el.getBoundingClientRect();
+    const mx = e.clientX - rect.left;          // css px
+    const my = e.clientY - rect.top;
+    const stageW = rect.width, stageH = rect.height;
+    const s = viewScale / CAM.zoom;            // escala base (sem zoom)
+    const zs = s * CAM.zoom;
+    const vx = stageW / 2 - CAM.x * zs;        // offset atual (css px)
+    const vy = stageH / 2 - CAM.y * zs;
+    // mundo sob o cursor
+    const wx = (mx - vx) / zs;
+    const wy = (my - vy) / zs;
+    const factor = (e.deltaY < 0) ? 1.2 : (1 / 1.2);
+    CAM.zoom = clampZoom(CAM.zoom * factor);
+    const zs2 = s * CAM.zoom;
+    CAM.x = wx - (mx - stageW / 2) / zs2;
+    CAM.y = wy - (my - stageH / 2) / zs2;
+  }, { passive: false });
+  // duplo clique reseta a câmera
+  el.addEventListener('dblclick', function (e) {
+    e.preventDefault();
+    camReset();
+  });
+}
+
+/* ---------- Renderizador WebGL (PixiJS) opt-in via ?pixi=1 ----------
+   O jogo SEMPRE inicia em Canvas 2D. Se `?pixi=1` estiver na URL, o
+   PixiJS é carregado dinamicamente (sem bloquear a página). Quando
+   (e se) ele carregar, o renderer troca para WebGL. Se falhar/ausente,
+   o jogo continua normalmente em Canvas — nunca quebra. */
+let USE_PIXI = false;
+(function () {
+  try {
+    const want = new URLSearchParams(location.search).get('pixi') === '1';
+    if (!want || !window.PIXIR) return;
+    window.PIXIR.enable(function (ok) {
+      USE_PIXI = ok;
+      if (ok) {
+        canvas.style.display = 'none';
+        try { window.PIXIR.resize(); } catch (e) {}
+      }
+    });
+  } catch (e) { USE_PIXI = false; }
+})();
+
+let baseScale = 1; // escala de encaixe do mundo na tela (sem zoom)
+
+function applyCamera() {
+  // calcula o transform da câmera a partir do CAM (zoom + centro)
+  const stage = document.getElementById('stage');
+  const w = stage.clientWidth, h = stage.clientHeight;
+  viewScale = baseScale * CAM.zoom;
+  viewOffX = w / 2 - CAM.x * viewScale;
+  viewOffY = h / 2 - CAM.y * viewScale;
+}
+
 function resize() {
+  if (USE_PIXI) { window.PIXIR.resize(); return; }
   const stage = document.getElementById('stage');
   const w = stage.clientWidth, h = stage.clientHeight;
   canvas.width = w * DPR; canvas.height = h * DPR;
   canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
-  const s = Math.min(w / PLAY_W, h / PLAY_H);
-  viewScale = s; viewOffX = (w - PLAY_W * s) / 2; viewOffY = (h - PLAY_H * s) / 2;
+  baseScale = Math.min(w / PLAY_W, h / PLAY_H);
+  applyCamera();
 }
 window.addEventListener('resize', resize);
 
@@ -41,14 +110,47 @@ function sfxBurst(){ blip(110,0.5,'sawtooth',0.3); setTimeout(()=>blip(330,0.4,'
 function sfxBoss(){ blip(70,0.8,'sawtooth',0.35); }
 function sfxLevel(){ blip(660,0.1,'sine',0.2); setTimeout(()=>blip(990,0.12,'sine',0.2),90); }
 
+/* ---------- Sprites dos runners (Canvas) ---------- */
+const RUNNER_IMGS = {};   // runnerId -> HTMLImageElement (ou null se falhou)
+const SPRITE_BASE = 'assets/runners/';
+const SPRITE_V = 'c70f01f'; // versão para cache-busting dos sprites
+function runnerSpriteUrl(id){ return SPRITE_BASE + id + '.png?v=' + SPRITE_V; }
+function ensureRunnerImg(r) {
+  const id = r.id;
+  if (RUNNER_IMGS[id] !== undefined) return RUNNER_IMGS[id];
+  RUNNER_IMGS[id] = null; // evita loop
+  const img = new Image();
+  img.onload = () => { RUNNER_IMGS[id] = img; };
+  img.onerror = () => { RUNNER_IMGS[id] = false; };
+  img.src = runnerSpriteUrl(id);
+  return RUNNER_IMGS[id];
+}
+
+/* ---------- Sprites dos inimigos (Canvas) ---------- */
+const ENEMY_IMGS = {};     // typeKey -> HTMLImageElement (ou null)
+const ENEMY_SPRITE_BASE = 'assets/enemies/';
+function enemySpriteUrl(typeKey){ return ENEMY_SPRITE_BASE + typeKey + '.png?v=' + SPRITE_V; }
+function ensureEnemyImg(e) {
+  const k = e.typeKey;
+  if (ENEMY_IMGS[k] !== undefined) return ENEMY_IMGS[k];
+  ENEMY_IMGS[k] = null; // evita loop
+  const img = new Image();
+  img.onload = () => { ENEMY_IMGS[k] = img; };
+  img.onerror = () => { ENEMY_IMGS[k] = false; };
+  img.src = enemySpriteUrl(k);
+  return ENEMY_IMGS[k];
+}
+
 /* ---------- Estado de scroll de fundo ---------- */
 const BG = { scroll: 0, motes: [] };
-for (let i=0;i<60;i++) BG.motes.push({x:Math.random()*PLAY_W,y:Math.random()*PLAY_H,s:Math.random()*2+0.5,v:Math.random()*30+10,c:Math.random()});
+for (let i=0;i<70;i++) BG.motes.push({x:Math.random()*PLAY_W,y:Math.random()*PLAY_H,s:Math.random()*2+0.6,v:Math.random()*35+12,drift:(Math.random()-0.5)*18,tw:Math.random()*Math.PI*2});
 
 /* ============================================================
    RENDER
    ============================================================ */
 function render() {
+  if (USE_PIXI) { window.PIXIR.render(); return; }
+  applyCamera();
   // fundo preto letterbox
   ctx.setTransform(1,0,0,1,0,0);
   ctx.fillStyle = '#02030a';
@@ -61,13 +163,11 @@ function render() {
 
   drawBackground();
 
-  // unidades ordenadas por y (profundidade)
-  const units = [...G.runners, ...G.enemies];
-  units.sort((a,b)=> (a.y) - (b.y));
-  for (const u of units) {
-    if (u.kind === 'runner') drawRunner(u);
-    else drawEnemy(u);
-  }
+  // profundidade: inimigos primeiro (atrás), runners por cima (nunca sobrepõem)
+  const enemies = [...G.enemies].sort((a,b)=> a.y - b.y);
+  for (const e of enemies) drawEnemy(e);
+  const runners = [...G.runners].sort((a,b)=> a.y - b.y);
+  for (const r of runners) drawRunner(r);
 
   // FX (partículas, números, etc.)
   FX.render(ctx);
@@ -82,51 +182,107 @@ function render() {
 }
 
 /* ---------- Fundo ---------- */
+// cache de fundos por zona (imagem jpg)
+const BG_IMGS = {};   // zoneId -> HTMLImageElement (ou null)
+const ZONE_BG_FILES = { 1:'z1_verdant', 2:'z2_inferno', 3:'z3_frozen', 4:'z4_storm', 5:'z5_void', 6:'z6_celestial', 7:'z7_core' };
+function zoneBgUrl(z){ return 'assets/bg/' + (ZONE_BG_FILES[z.id] || ('z'+z.id)) + '.jpg?v=' + SPRITE_V; }
+function ensureBgImg(z) {
+  const id = z.id;
+  if (BG_IMGS[id] !== undefined) return BG_IMGS[id];
+  BG_IMGS[id] = null;
+  const img = new Image();
+  img.onload = () => { BG_IMGS[id] = img; };
+  img.onerror = () => { BG_IMGS[id] = false; };
+  img.src = zoneBgUrl(z);
+  return BG_IMGS[id];
+}
+// cache de gradientes do fundo por zona (evita recriar todo frame)
+const BG_GRADIENTS = {};
+function bgGradients(z) {
+  const key = z.id;
+  if (!BG_GRADIENTS[key]) {
+    const g = ctx.createLinearGradient(0,0,0,PLAY_H);
+    g.addColorStop(0,z.sky[0]); g.addColorStop(0.5,z.sky[1]); g.addColorStop(1,z.sky[2]);
+    const rg = ctx.createRadialGradient(PLAY_W+80,GROUND_Y-80,40,PLAY_W+80,GROUND_Y-80,520);
+    rg.addColorStop(0, hexA(z.accent,0.35)); rg.addColorStop(1,'rgba(0,0,0,0)');
+    const fg = ctx.createLinearGradient(0,GROUND_Y,0,PLAY_H);
+    fg.addColorStop(0, z.ground); fg.addColorStop(1, '#02030a');
+    BG_GRADIENTS[key] = { g, rg, fg, accent:z.accent };
+  }
+  return BG_GRADIENTS[key];
+}
 function drawBackground() {
   const z = ZONES[G.zone-1] || ZONES[0];
-  // céu
-  const g = ctx.createLinearGradient(0,0,0,PLAY_H);
-  g.addColorStop(0,z.sky[0]); g.addColorStop(0.5,z.sky[1]); g.addColorStop(1,z.sky[2]);
-  ctx.fillStyle = g; ctx.fillRect(0,0,PLAY_W,PLAY_H);
+  // fundo de imagem (se carregou); senão gradiente
+  const bgimg = ensureBgImg(z);
+  if (bgimg) {
+    // leve zoom/pan lento no fundo (efeito "vivo")
+    const pw = PLAY_W, ph = PLAY_H;
+    ctx.save();
+    ctx.translate(pw/2, ph/2);
+    const k = 1 + 0.015 * Math.sin(performance.now()/3000);
+    ctx.scale(k, k);
+    ctx.drawImage(bgimg, -pw/2, -ph/2, pw, ph);
+    ctx.restore();
+  } else {
+    const bg = bgGradients(z);
+    ctx.fillStyle = bg.g; ctx.fillRect(0,0,PLAY_W,PLAY_H);
+    ctx.fillStyle = bg.rg; ctx.fillRect(0,0,PLAY_W,PLAY_H);
+  }
 
-  // glow do rift (direita, de onde vêm inimigos)
-  const rg = ctx.createRadialGradient(PLAY_W+80,GROUND_Y-80,40,PLAY_W+80,GROUND_Y-80,520);
-  rg.addColorStop(0, hexA(z.accent,0.35)); rg.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle = rg; ctx.fillRect(0,0,PLAY_W,PLAY_H);
+  // --- ELEMENTOS VIVOS (sempre por cima do fundo) ---
+  // brilho pulsante do rift (direita, de onde vêm os inimigos)
+  const pulse = 0.28 + 0.12 * Math.sin(performance.now()/500);
+  const rg2 = ctx.createRadialGradient(PLAY_W+60, GROUND_Y-80, 30, PLAY_W+60, GROUND_Y-80, 420);
+  rg2.addColorStop(0, hexA(z.accent, pulse));
+  rg2.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = rg2; ctx.fillRect(0,0,PLAY_W,PLAY_H);
 
-  // partículas de aether flutuando
+  // partículas de aether flutuando (motes)
   for (const m of BG.motes) {
     m.x -= m.v * 0.016 * G.speed;
+    m.y += m.drift * 0.016 * G.speed;
     if (m.x < -10) { m.x = PLAY_W+10; m.y = Math.random()*PLAY_H; }
-    ctx.globalAlpha = 0.5; ctx.fillStyle = z.accent;
+    if (m.y < -5) m.y = PLAY_H+5; if (m.y > PLAY_H+5) m.y = -5;
+    const tw = 0.4 + 0.3 * Math.sin(performance.now()/400 + m.tw);
+    ctx.globalAlpha = tw; ctx.fillStyle = z.accent;
     ctx.beginPath(); ctx.arc(m.x, m.y, m.s, 0, Math.PI*2); ctx.fill();
   }
   ctx.globalAlpha = 1;
 
-  // silhuetas distantes (parallax lento)
+  // silhuetas distantes em parallax lento
   BG.scroll += 0.4 * G.speed;
-  ctx.fillStyle = hexA(z.sky[2], 0.7);
+  ctx.fillStyle = hexA(z.sky[2]||z.accent, 0.25);
   for (let i=-1;i<8;i++){
     const x = ((i*220 - (BG.scroll*0.3)%220) + PLAY_W) % (PLAY_W+220) - 110;
-    drawCrystal(x, GROUND_Y-150, 90, z.accent, 0.12);
+    drawCrystal(x, GROUND_Y-150, 90, z.accent, 0.10);
   }
-  // silhuetas médias
-  ctx.fillStyle = hexA('#000000', 0.35);
+  ctx.fillStyle = hexA('#000000', 0.3);
   for (let i=-1;i<5;i++){
     const x = ((i*340 - (BG.scroll*0.6)%340) + PLAY_W) % (PLAY_W+340) - 170;
-    drawCrystal(x, GROUND_Y-90, 60, z.accent, 0.18);
+    drawCrystal(x, GROUND_Y-90, 60, z.accent, 0.16);
   }
 
-  // chão
-  const fg = ctx.createLinearGradient(0,GROUND_Y,0,PLAY_H);
-  fg.addColorStop(0, z.ground); fg.addColorStop(1, '#02030a');
-  ctx.fillStyle = fg; ctx.fillRect(0,GROUND_Y,PLAY_W,PLAY_H-GROUND_Y);
-  // linha de aether no chão
-  ctx.strokeStyle = hexA(z.accent,0.5); ctx.lineWidth = 2;
-  ctx.shadowColor = z.accent; ctx.shadowBlur = 12;
-  ctx.beginPath(); ctx.moveTo(0,GROUND_Y+2); ctx.lineTo(PLAY_W,GROUND_Y+2); ctx.stroke();
-  ctx.shadowBlur = 0;
+  // chão (gradiente em cache ou sombra sobre a imagem)
+  if (bgimg) {
+    // véu escuro no chão para dar profundidade
+    const fg = ctx.createLinearGradient(0,GROUND_Y,0,PLAY_H);
+    fg.addColorStop(0, 'rgba(0,0,0,0.25)'); fg.addColorStop(1, 'rgba(2,3,10,0.75)');
+    ctx.fillStyle = fg; ctx.fillRect(0,GROUND_Y,PLAY_W,PLAY_H-GROUND_Y);
+  } else {
+    ctx.fillStyle = bgGradients(z).fg; ctx.fillRect(0,GROUND_Y,PLAY_W,PLAY_H-GROUND_Y);
+  }
+  // linha de aether pulsante no chão — só no fallback de gradiente (sem imagem),
+  // senão cria uma linha de cor estranha sobre a arte do fundo
+  if (!bgimg) {
+    ctx.strokeStyle = hexA(z.accent, 0.4 + 0.3*Math.sin(performance.now()/400));
+    ctx.lineWidth = 2;
+    ctx.shadowColor = z.accent; ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.moveTo(0,GROUND_Y+2); ctx.lineTo(PLAY_W,GROUND_Y+2); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
 }
+
 function drawCrystal(x, y, h, color, alpha){
   ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color;
   ctx.beginPath();
@@ -165,6 +321,32 @@ function drawRunner(r) {
   }
 
   ctx.translate(0, bob);
+
+  // --- sprite de imagem (se carregou) substitui o corpo vetorial ---
+  const rimg = ensureRunnerImg(r);
+  if (rimg) {
+    // escala por profundidade: mais à frente (maior y) = maior sprite (perspectiva)
+    const depth = clamp(0.88 + (r.y - (GROUND_Y-44)) / 44 * 0.3, 0.88, 1.18);
+    const hgt = 96 * depth * s;       // altura do sprite em unidades de jogo
+    ctx.drawImage(rimg, -hgt/2, -hgt, hgt, hgt);
+    ctx.rotate(0);
+    // hit flash sobre o sprite
+    if (r.hitFlash > 0) {
+      ctx.globalAlpha = (r.hitFlash/0.18)*0.5;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(-hgt/2, -hgt, hgt, hgt);
+      ctx.globalAlpha = dying?0.25:1;
+    }
+    // escudo
+    if (r.shieldHp > 0) {
+      ctx.strokeStyle = hexA('#4cc9ff',0.8); ctx.lineWidth=2; ctx.shadowColor='#4cc9ff'; ctx.shadowBlur=10;
+      ctx.beginPath(); ctx.arc(0,-22*s, 24*s, 0, Math.PI*2); ctx.stroke(); ctx.shadowBlur=0;
+    }
+    ctx.restore();
+    if (!dying) drawUnitLabel(r, true);
+    return;
+  }
+
   // lean on swing
   const lean = r.swing * 0.3;
   ctx.rotate(lean);
@@ -276,6 +458,39 @@ function drawEnemy(e) {
 
   // congelado overlay antes
   ctx.translate(0, bob);
+
+  // --- sprite de imagem (se carregou) substitui o corpo vetorial ---
+  const eimg = ensureEnemyImg(e);
+  if (eimg) {
+    const depth = clamp(0.88 + (e.y - (GROUND_Y-44)) / 44 * 0.3, 0.88, 1.18);
+    const hgt = sz * 2.4 * depth;         // altura do sprite (tamanho × profundidade)
+    ctx.globalAlpha = e.alive ? 1 : Math.max(0, e.dyingTimer/0.5);
+    ctx.drawImage(eimg, -hgt/2, -hgt, hgt, hgt);
+    ctx.globalAlpha = 1;
+    // hit flash
+    if (e.hitFlash > 0) {
+      ctx.globalAlpha = (e.hitFlash/0.18)*0.5;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(-hgt/2, -hgt, hgt, hgt);
+      ctx.globalAlpha = 1;
+    }
+    // frozen
+    if (e.frozen > 0) {
+      ctx.fillStyle = hexA('#9be3ff',0.4);
+      ctx.fillRect(-hgt/2, -hgt, hgt, hgt);
+    }
+    ctx.restore();
+    // gravity mark ring
+    if (e.gravityMark > 0) {
+      ctx.save(); ctx.translate(e.x,e.y);
+      ctx.strokeStyle = hexA('#c9a8ff',0.8); ctx.lineWidth=2;
+      ctx.setLineDash([4,4]); ctx.lineDashOffset = -performance.now()/60;
+      ctx.beginPath(); ctx.arc(0,-e.size*0.6,e.size*1.1,0,Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]); ctx.restore();
+    }
+    if (e.alive && !e.isBoss) drawUnitLabel(e, false);
+    return;
+  }
 
   // corpo
   const bg = ctx.createRadialGradient(-sz*0.2,-sz*0.3,2,0,0,sz);
@@ -532,6 +747,8 @@ function buildResonanceStrip() {
 /* ---------- Painéis ---------- */
 function openPanel(view) {
   G.view = view;
+  // botão Progresso: abre o dashboard do projeto (página separada)
+  if (view === 'progresso') { location.href = 'PROGRESSO.html'; return; }
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
   if (view === 'march') { $('panel-overlay').classList.add('hidden'); return; }
   $('panel-overlay').classList.remove('hidden');
@@ -541,7 +758,7 @@ function openPanel(view) {
   else if (view === 'infinity') { c.innerHTML = panelInfinity(); setTimeout(bindCircuit,0); }
   else if (view === 'gear') c.innerHTML = panelGear();
   else if (view === 'dungeons') c.innerHTML = panelDungeons();
-  else if (view === 'reboot') c.innerHTML = panelReboot();
+  else if (view === 'ascension') { c.innerHTML = panelAscension(); setTimeout(bindAscension,0); }
   bindPanel();
 }
 
@@ -633,15 +850,21 @@ function bindPanel() {
 }
 
 function panelCodex() {
-  let h = `<h2>RIFT CODEX</h2><div class="panel-sub">Os 8 Aether Runners do MVP — lore, habilidades e vínculos.</div>`;
+  const completed = RUNNERS.filter(r=>codexCompleted(r.id)).length;
+  let h = `<h2>RIFT CODEX</h2>`;
+  h += `<div class="panel-sub">Lore, habilidades e vínculos dos 8 Aether Runners. Cada runner preenche a entrada ao abater <b style="color:var(--gold)">${CODEX_KILL_REQ} entidades</b> — completar dá <b style="color:var(--gold)">+1 Ponto de Ascensão</b>. (${completed}/${RUNNERS.length} completos)</div>`;
   h += `<div class="codex-list">`;
   for (const r of RUNNERS) {
     const rar = RARITIES[r.rarity];
-    h += `<div class="codex-item">
+    const prog = Math.min(100, codexProgress(r.id)/CODEX_KILL_REQ*100);
+    const done = codexCompleted(r.id);
+    h += `<div class="codex-item ${done?'codex-done':''}">
       <div class="codex-avatar" style="background:linear-gradient(180deg,${lighten(r.color,.2)},${r.color});color:#04211f">${r.name.slice(0,2)}</div>
       <div class="codex-body">
-        <div class="codex-name">${ELEMENTS[r.element].icon} ${r.name} <span style="color:${rar.color}">${'★'.repeat(rar.stars)}</span></div>
+        <div class="codex-name">${ELEMENTS[r.element].icon} ${r.name} <span style="color:${rar.color}">${'★'.repeat(rar.stars)}</span> ${done?'<span class="codex-done-tag">COMPLETO ✓</span>':''}</div>
         <div class="codex-meta">${r.title} · ${r.cls} · ${ELEMENTS[r.element].name} · ${r.posPref}</div>
+        <div class="codex-bar"><div class="codex-bar-fill" style="width:${prog}%"></div></div>
+        <div class="codex-progress">${formatNumber(codexProgress(r.id))}/${CODEX_KILL_REQ} abates ${done?'· +1⭐':''}</div>
         <div class="ability-row"><b>Passiva:</b> <span>${r.passive.name} — ${r.passive.desc}</span></div>
         <div class="ability-row"><b>Skill:</b> <span>${r.skill.name} — ${r.skill.desc}</span></div>
         <div class="ability-row"><b>Aether Burst:</b> <span style="color:${r.color}">${r.burst.name}</span> — ${r.burst.desc}</div>
@@ -655,7 +878,7 @@ function panelCodex() {
 
 function panelInfinity() {
   const inf = infinityBonuses();
-  let h = `<h2>INFINITY CIRCUIT</h2><div class="panel-sub">Bônus permanentes comprados com Infinity Fragments. Sobrevivem ao Reboot.</div>`;
+  let h = `<h2>INFINITY CIRCUIT</h2><div class="panel-sub">Bônus permanentes comprados com Infinity Fragments. Fragmentos vêm de subir de nível da conta e ao limpar zonas.</div>`;
   h += `<div class="circuit"><div class="circuit-frag">💠 ${G.infinityFragments} Fragmentos</div>`;
   // linhas
   h += `<svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">`;
@@ -740,39 +963,104 @@ function panelDungeons() {
   return h;
 }
 
-function panelReboot() {
-  const gain = Math.floor(G.maxLevel/10) + (G.maxZone-1)*5 + 2;
-  const rank = astralRank(G.rebootCount);
-  let h = `<h2>INFINITE REBOOT</h2><div class="panel-sub">Reinicie a marcha do zero e ganhe Infinity Fragments permanentes. Você NÃO perde Runners, Resonance, Infinity Circuit nem equipamentos Lendários.</div>`;
-  h += `<div style="padding:0 24px 12px"><div style="background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center">
-    <div style="color:var(--muted);font-size:12px">SEU RANK ASTRAL</div>
-    <div style="font-family:Orbitron;font-weight:900;font-size:28px;color:${rank.color}">${rank.name}</div>
-    <div style="color:var(--muted);font-size:12px;margin-top:4px">${G.rebootCount} reboots · ${rank.bonus}</div>
-  </div></div>`;
-  h += `<div style="padding:0 24px 24px;text-align:center">
-    <div style="color:var(--muted);font-size:13px;margin-bottom:10px">Recompensa estimada deste Reboot:</div>
-    <div style="font-family:Orbitron;font-weight:900;font-size:24px;color:var(--aether);margin-bottom:16px">+${gain} 💠 Infinity Fragments</div>
-    <button class="big-btn" id="doReboot">EXECUTAR INFINITE REBOOT</button>
-  </div>`;
-  setTimeout(()=>{
-    const b = document.getElementById('doReboot');
-    if (b) b.addEventListener('click', ()=>{
-      G.rebootCount++; G.infinityFragments += gain;
-      G.zone=1; G.level=1; G.maxLevel=1;
-      for (const id of G.ownedRunners) G.runnerLevels[id]={level:1,xp:0,gear:[]};
-      G.runners=[]; buildSquad(); buildBurstBars(); save();
-      banner('INFINITE REBOOT', 'Recomece mais forte', '#3afff0');
-      openPanel('march'); notify('+'+gain+' Infinity Fragments!', '#3afff0');
-    });
-  },0);
+function panelAscension() {
+  const lvl = G.accountLevel;
+  const xp = G.accountXp;
+  const need = accountXpNeeded(lvl);
+  const pct = Math.min(100, (xp / need) * 100);
+  const pts = G.ascensionPoints;
+  const spent = Object.keys(G.ascension).filter(k=>G.ascension[k]).length;
+  const bon = allBonuses();
+  let h = `<h2>ASCENSÃO</h2>`;
+  h += `<div class="panel-sub">Escolha passivas permanentes gastando <b style="color:var(--gold)">Pontos de Ascensão</b> — ganhos a cada nível de conta e ao completar entradas do <b>Codex</b>.</div>`;
+
+  // barra de XP + pontos
+  h += `<div style="padding:0 24px 16px"><div style="background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 16px">`;
+  h += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">`;
+  h += `<div style="font-family:Orbitron;font-weight:900;font-size:22px;color:var(--aether)">⭐ Pontos: ${pts}</div>`;
+  h += `<div style="color:var(--muted);font-size:12px">${spent}/${ASCENSION_NODES.length} nós · Nível de conta ${lvl}</div>`;
+  h += `</div>`;
+  h += `<div style="height:10px;background:#05070f;border:1px solid #1a2040;border-radius:5px;overflow:hidden">`;
+  h += `<div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--aether),#9bfff7)"></div></div>`;
+  h += `<div style="color:var(--muted);font-size:11px;margin-top:5px;text-align:center">${formatNumber(xp)} / ${formatNumber(need)} XP até o próximo ponto</div>`;
+  h += `</div></div>`;
+
+  // a árvore
+  h += `<div style="padding:0 24px 8px;color:var(--muted);font-size:12px">Clique num nó brilhante para desbloqueá-lo.</div>`;
+  h += `<div class="ascension-tree">`;
+  h += `<svg class="asc-lines" viewBox="0 0 100 100" preserveAspectRatio="none">`;
+  const pathMap = {};
+  for (const n of ASCENSION_NODES) {
+    for (const p of (n.prereq||[])) {
+      const pr = ASCENSION_NODES.find(x=>x.id===p);
+      if (!pr) continue;
+      const owned = G.ascension[p];
+      pathMap[p] = pathMap[p] || [];
+      pathMap[p].push({ x2:n.x, y2:n.y, owned });
+    }
+  }
+  // desenha conexões como curvas suaves
+  for (const p in pathMap) {
+    const pr = ASCENSION_NODES.find(x=>x.id===p);
+    for (const c of pathMap[p]) {
+      const x1 = pr.x*100, y1 = pr.y*100, x2 = c.x2*100, y2 = c.y2*100;
+      const mid = (y1+y2)/2;
+      const col = c.owned ? 'var(--aether)' : '#2a3358';
+      h += `<path d="M ${x1} ${y1} C ${x1} ${mid}, ${x2} ${mid}, ${x2} ${y2}" stroke="${col}" stroke-width="0.7" fill="none"/>`;
+    }
+  }
+  h += `</svg>`;
+  for (const n of ASCENSION_NODES) {
+    const owned = !!G.ascension[n.id];
+    const metPrereq = (n.prereq||[]).every(p => G.ascension[p]);
+    const affordable = metPrereq && !owned && G.ascensionPoints >= n.cost;
+    const cls = owned ? 'owned' : (affordable ? 'available' : 'locked');
+    h += `<div class="asc-node ${cls}" style="left:${n.x*100}%;top:${n.y*100}%" data-asc="${n.id}" title="${n.name}: ${n.desc} (${n.cost}⭐)">`;
+    h += `<span class="asc-icon">${n.icon}</span><span class="asc-label">${n.name}</span>`;
+    if (owned) h += `<span class="asc-check">✓</span>`;
+    else if (affordable) h += `<span class="asc-cost">${n.cost}</span>`;
+    h += `</div>`;
+  }
+  h += `</div>`;
+
+  // legenda / bônus ativos
+  h += `<div style="padding:0 24px 20px"><div style="display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:11px;margin-bottom:8px">`;
+  h += `<span><span class="leg sw-owned"></span> Desbloqueado</span>`;
+  h += `<span><span class="leg sw-avail"></span> Comprável</span>`;
+  h += `<span><span class="leg sw-locked"></span> Bloqueado</span>`;
+  h += `</div>`;
+  h += `<div style="font-family:Orbitron;font-weight:700;font-size:12px;color:var(--muted);margin-bottom:6px">BÔNUS ATIVOS DA ÁRVORE</div>`;
+  h += `<div style="color:var(--muted);font-size:12px;line-height:1.7">`;
+  h += `ATQ +${Math.round((bon.atq||0)*100)}% · DEF +${Math.round((bon.def||0)*100)}% · HP +${Math.round((bon.hp||0)*100)}%`;
+  if (bon.crt) h += ` · CRT +${bon.crt}%`;
+  if (bon.cdg) h += ` · CDG +${Math.round(bon.cdg*100)}%`;
+  if (bon.eva) h += ` · EVA +${bon.eva}%`;
+  if (bon.pen) h += ` · PEN +${bon.pen}%`;
+  h += ` · Burst +${Math.round((bon.ach||0)*100)}% · Shards +${Math.round((bon.shards||0)*100)}% · XP +${Math.round((bon.xp||0)*100)}%`;
+  if (bon.drop) h += ` · Drop +${Math.round(bon.drop*100)}%`;
+  if (bon.offline) h += ` · Offline +${Math.round(bon.offline*100)}%`;
+  h += `</div></div>`;
   return h;
 }
-function astralRank(n){ const r=[
-  {name:'ROOKIE',color:'#8a93b8',bonus:'—'},{name:'SPARK',color:'#4cc9ff',bonus:'+Dungeon especial'},
-  {name:'VOLT',color:'#ffd23f',bonus:'+Modo Companion'},{name:'BLAZE',color:'#ff5a3c',bonus:'+6º slot de Runner'},
-  {name:'STORM',color:'#3aa0ff',bonus:'+Burst Mode (3x)'},{name:'AETHER',color:'#3afff0',bonus:'+Zona secreta'},
-  {name:'INFINITE',color:'#fff',bonus:'Scaling infinito + título'}];
-  return r[Math.min(r.length-1, n<=0?0: 1+Math.floor(Math.log2(n+1)))];
+
+function bindAscension() {
+  document.querySelectorAll('.asc-node[data-asc]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const id = el.dataset.asc;
+      const node = ASCENSION_NODES.find(n=>n.id===id);
+      if (!node || G.ascension[id]) return;
+      const metPrereq = (node.prereq||[]).every(p => G.ascension[p]);
+      if (!metPrereq) { notify('Pré-requisitos não desbloqueados', '#ff5a3c'); return; }
+      if (G.ascensionPoints < node.cost) { notify('Pontos de Ascensão insuficientes', '#ff5a3c'); return; }
+      G.ascensionPoints -= node.cost;
+      G.ascension[id] = true;
+      save();
+      for (const r of G.runners) computeStats(r);
+      openPanel('ascension');
+      notify(node.icon + ' ' + node.name + ' desbloqueado!', '#3afff0');
+      sfxLevel();
+    });
+  });
 }
 
 /* ---------- Toasts ---------- */
@@ -837,6 +1125,7 @@ function boot() {
     G.shards = 200;
   }
   resize();
+  setupCamera();
   buildSquad();
   buildBurstBars();
   bindGlobal();
