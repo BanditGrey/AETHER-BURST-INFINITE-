@@ -966,13 +966,18 @@ function bindCircuit() {
    ============================================================ */
 const GEAR_UI = { slot: "all", sort: "rarity", runner: null };
 const GEAR_SLOTS = [
-  { id: "weapon", name: "Armas",      icon: "⚔️" },
-  { id: "armor",  name: "Armaduras",  icon: "🛡️" },
-  { id: "core",   name: "Núcleos",    icon: "💠" },
-  { id: "relic",  name: "Relíquias",  icon: "🔮" },
+  { id: "weapon",   name: "Armas",      icon: "⚔️" },
+  { id: "armor",    name: "Armaduras",  icon: "🛡️" },
+  { id: "core",     name: "Núcleos",    icon: "💠" },
+  { id: "relic",    name: "Relíquias",  icon: "🔮" },
+  { id: "ring",     name: "Anéis",      icon: "💍" },
+  { id: "earring",  name: "Brincos",    icon: "✨" },
+  { id: "necklace", name: "Colares",    icon: "📿" },
+  { id: "bracelet", name: "Pulseiras",  icon: "⛓️" },
 ];
 function slotIcon(s){ return (GEAR_SLOTS.find(g=>g.id===s)||{}).icon || "📦"; }
-function slotName(s){ return {weapon:'Burst Weapon',armor:'Rift Armor',core:'Aether Core',relic:'Infinity Relic'}[s]||s; }
+function slotName(s){ return {weapon:'Burst Weapon',armor:'Rift Armor',core:'Aether Core',relic:'Infinity Relic',ring:'Anel',earring:'Brinco',necklace:'Colar',bracelet:'Pulseira'}[s]||s; }
+function slotShort(s){ return {weapon:'ARMA',armor:'ARMAD.',core:'NÚCLEO',relic:'RELÍQ.',ring:'ANEL',earring:'BRINCO',necklace:'COLAR',bracelet:'PULS.'}[s]||s; }
 /* sprite de skill por runner — usado como ícone no painel */
 const RUNNER_SKILL_SPRITE = {
   kairo: "kairo_volt_fang", zael: "zael_crimson_slash", seraph: "seraph_event_horizon",
@@ -980,15 +985,30 @@ const RUNNER_SKILL_SPRITE = {
   rex: "rex_savage_charge", sable: "sable_shadow_execution",
 };
 function gearStatChips(it) {
-  const LBL = { atq:"ATQ", hp:"HP", def:"DEF", spd:"SPD", ach:"AETHER" };
-  const PCT100 = { crt:"CRT", cdg:"CDG", eva:"EVA", pen:"PEN" };
+  // fração (0.10=+10%): hp, atq, def, spd, crt, cdg, eva, ach — pen é em pontos (8 = +8%)
+  const LBL = { atq:"ATQ", hp:"HP", def:"DEF", spd:"SPD", ach:"AETHER", crt:"CRT", cdg:"CDG", eva:"EVA" };
   const chips = [];
   for (const k in (it.stats||{})) {
     const v = it.stats[k];
     if (LBL[k])       chips.push(`+${Math.round(v*100)}% ${LBL[k]}`);
-    else if (PCT100[k]) chips.push(`+${Math.round(v*100)}% ${PCT100[k]}`);
+    else if (k === "pen") chips.push(`+${Math.round(v)}% PEN`);
   }
   return chips;
+}
+/* tooltip rico da peça (hover no ícone do inventário ou no slot equipado) */
+function gearTooltipHTML(it, rar, hint, withSalvage) {
+  const stats = gearStatChips(it).map(c=>`<span class="gt-stat">${c}</span>`).join("");
+  return `<div class="gtip">
+    <div class="gt-name" style="color:${rar.color}">${it.name}</div>
+    <div class="gt-meta" style="color:${rar.color}">${'★'.repeat(rar.stars)} <span style="color:var(--muted)">${rar.name} · ${slotName(it.slot)}</span></div>
+    <div class="gt-stats">${stats}</div>
+    ${it.proc ? `<div class="gt-proc">✦ PROC — ${GEAR_PROCS[it.proc] || it.proc}</div>` : ""}
+    ${it.desc ? `<div class="gt-desc">${it.desc}</div>` : ""}
+    <div class="gt-foot">
+      <span class="gt-hint">${hint}</span>
+      ${withSalvage ? `<button class="gt-salv" data-salvage="${it.uid}" title="Reciclar">♻ +${SALVAGE_VALUE[it.rarity]||10} 💎</button>` : ""}
+    </div>
+  </div>`;
 }
 /* "poder de combate" exibido no retrato — sobe com gear e nível */
 function runnerPower(u) {
@@ -1004,8 +1024,9 @@ function panelGear() {
   const sel = GEAR_UI.runner;
 
   let h = `<h2>RIFT GEAR</h2>
-    <div class="panel-sub">Escolha um Runner à esquerda, clique numa peça do inventário para equipar.
-    Slots brilhando = preenchidos (clique p/ desequipar). Inventário: <b>${loot.length}/${LOOT_CAP}</b> — reciclar é opcional e rende 💎.</div>`;
+    <div class="panel-sub">8 slots por Runner — arma, armadura, núcleo, relíquia e os 4 acessórios (anel · brinco · colar · pulseira).
+    Passe o mouse numa peça p/ ver os detalhes, clique p/ equipar. Slots brilhando = preenchidos (clique p/ desequipar).
+    Inventário: <b>${loot.length}/${LOOT_CAP}</b> — reciclar é opcional e rende 💎.</div>`;
   h += `<div class="gearwrap">`;
 
   /* ---------- ESQUERDA: lista de runners ---------- */
@@ -1034,24 +1055,28 @@ function panelGear() {
     const u = makeRunner(sel, 0); u.level = li.level; computeStats(u);
     const gear = runnerGear(sel);
     const rar = RARITIES[r.rarity];
-    const slotBtn = (slotId, pos) => {
+    const slotBtn = (slotId) => {
       const it = gear[slotId];
       const gs = GEAR_SLOTS.find(g=>g.id===slotId);
       if (it) {
         const ir = RARITIES[it.rarity];
-        return `<button class="gws filled ${pos}" data-unequip="${sel}:${slotId}" style="--rar:${ir.color}"
-          title="${it.name} (${ir.name}) — clique p/ desequipar"><span>${gs.icon}</span><i>${'★'.repeat(ir.stars)}</i></button>`;
+        return `<button class="gws filled" data-unequip="${sel}:${slotId}" style="--rar:${ir.color}">
+          <span class="gws-ico">${gs.icon}</span><i>${'★'.repeat(ir.stars)}</i>
+          ${gearTooltipHTML(it, ir, 'Clique p/ desequipar', false)}
+        </button>`;
       }
-      return `<button class="gws ${pos}" data-gshow="${slotId}" title="${slotName(slotId)} vazio — clique p/ filtrar o inventário"><span style="opacity:.3">${gs.icon}</span></button>`;
+      return `<button class="gws empty" data-gshow="${slotId}" title="${slotName(slotId)} vazio — clique p/ filtrar o inventário">
+        <span class="gws-ico" style="opacity:.3">${gs.icon}</span><span class="gws-lbl">${slotShort(slotId)}</span>
+      </button>`;
     };
     h += `<div class="gw-detail" style="--rc:${r.color}">
       <div class="gw-stage">
-        ${slotBtn('weapon','p-tl')}${slotBtn('core','p-tr')}
+        <div class="gw-slots">${slotBtn('weapon')}${slotBtn('armor')}${slotBtn('ring')}${slotBtn('bracelet')}</div>
         <div class="gw-portrait">
           <div class="gw-aura"></div>
           <img src="assets/runners/${sel}.png?v=${SPRITE_V}" alt="${r.name}" onerror="this.style.display='none'"/>
         </div>
-        ${slotBtn('armor','p-bl')}${slotBtn('relic','p-br')}
+        <div class="gw-slots">${slotBtn('core')}${slotBtn('relic')}${slotBtn('necklace')}${slotBtn('earring')}</div>
       </div>
       <div class="gw-name">${ELEMENTS[r.element].icon} ${r.name}
         <span class="gw-stars" style="color:${rar.color}">${'★'.repeat(rar.stars)}</span>
@@ -1100,20 +1125,15 @@ function panelGear() {
   else if (GEAR_UI.sort === "slot") items = items.slice().sort((a,b)=> a.slot.localeCompare(b.slot) || rarRank(b.rarity)-rarRank(a.rarity));
   else items = items.slice().sort((a,b)=> a.name.localeCompare(b.name));
 
-  h += `<div class="gw-grid">`;
+  h += `<div class="gw-grid gi-grid">`;
   if (!items.length) h += `<div class="gear-empty">Nada aqui ainda — Elites e Bosses dropam gear; dungeons também. 🌀</div>`;
   for (const it of items) {
     const rar = RARITIES[it.rarity];
-    const chips = gearStatChips(it).map(c=>`<span class="gchip">${c}</span>`).join("");
-    h += `<div class="gear-card" style="--rar:${rar.color}" data-qequip="${it.uid}" title="Clique p/ equipar em ${sel?RUNNER_BY_ID[sel].name:''}">
-      <div class="gc-head">
-        <span class="gc-ico">${slotIcon(it.slot)}</span>
-        <div class="gc-title"><div class="gc-name" style="color:${rar.color}">${it.name}</div>
-        <div class="gc-meta">${'★'.repeat(rar.stars)} ${rar.name} · ${slotName(it.slot)}</div></div>
-        <button class="gc-salv" data-salvage="${it.uid}" title="Reciclar por ${SALVAGE_VALUE[it.rarity]||10} 💎">♻</button>
-      </div>
-      <div class="gc-stats">${chips}</div>
-      ${it.proc ? `<div class="gc-proc">✦ ${GEAR_PROCS[it.proc] || it.proc}</div>` : ""}
+    h += `<div class="gi" style="--rar:${rar.color}" data-qequip="${it.uid}">
+      <span class="gi-ico">${slotIcon(it.slot)}</span>
+      <span class="gi-stars" style="color:${rar.color}">${'★'.repeat(rar.stars)}</span>
+      ${it.proc ? `<span class="gi-proc" title="Possui PROC">✦</span>` : ""}
+      ${gearTooltipHTML(it, rar, sel ? `Clique p/ equipar em ${RUNNER_BY_ID[sel].name}` : 'Selecione um Runner', true)}
     </div>`;
   }
   h += `</div></div>`;   /* gw-grid + gw-inv */
@@ -1152,6 +1172,16 @@ function bindGear() {
     const r = salvageWhere(it => it.rarity === "common" || it.rarity === "uncommon");
     notify(r.n ? `♻ ${r.n} peças recicladas → +${r.total} 💎` : "Nenhuma peça comum/incomum pra reciclar");
     sfxHit(); openPanel("gear");
+  });
+  // tooltips: viram p/ dentro quando o ícone está colado na borda da grade
+  document.querySelectorAll(".gi-grid .gi").forEach(t=>{
+    t.addEventListener("mouseenter", ()=>{
+      const tip = t.querySelector(".gtip");
+      const grid = t.parentElement;
+      if (!tip || !grid || t.offsetLeft === undefined || !grid.clientWidth) return;
+      tip.classList.toggle("al-l", t.offsetLeft < 120);
+      tip.classList.toggle("al-r", (grid.clientWidth - t.offsetLeft - t.offsetWidth) < 120);
+    });
   });
 }
 

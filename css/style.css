@@ -255,7 +255,7 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
    RIFT GEAR — layout estilo "tela de equipamento" (referência)
    ============================================================ */
 .panel.gear-wide{width:min(1220px,100%)}
-.gearwrap{display:grid;grid-template-columns:190px minmax(0,1fr) minmax(0,1.15fr);gap:14px;padding:0 20px 22px}
+.gearwrap{display:grid;grid-template-columns:190px minmax(0,1.15fr) minmax(0,1fr);gap:14px;padding:0 20px 22px}
 
 /* --- esquerda: lista de runners --- */
 .gw-runners{display:flex;flex-direction:column;gap:8px;align-content:start;overflow-y:auto;max-height:64vh;padding-right:4px}
@@ -274,11 +274,11 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
 
 /* --- centro: retrato + slots + stats --- */
 .gw-detail{background:radial-gradient(120% 90% at 50% 20%,#16204a 0%,#0b1024 60%,#070a18 100%);
-  border:1px solid var(--line);border-radius:14px;padding:14px 12px;text-align:center;position:relative;overflow:hidden}
+  border:1px solid var(--line);border-radius:14px;padding:14px 12px;text-align:center;position:relative;overflow:visible}
 .gw-detail::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;
   background:linear-gradient(90deg,transparent,var(--rc),transparent)}
-.gw-stage{position:relative;height:300px;margin-bottom:6px}
-.gw-portrait{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:230px;height:290px;
+.gw-stage{display:flex;align-items:center;justify-content:center;gap:10px;min-height:330px;margin-bottom:6px;position:relative}
+.gw-portrait{position:relative;width:216px;height:318px;flex-shrink:0;
   display:flex;align-items:flex-end;justify-content:center;pointer-events:none}
 .gw-portrait img{max-width:100%;max-height:100%;object-fit:contain;
   filter:drop-shadow(0 6px 18px rgba(0,0,0,.6)) drop-shadow(0 0 22px color-mix(in srgb,var(--rc) 45%,transparent))}
@@ -286,16 +286,20 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
   background:radial-gradient(ellipse at center,color-mix(in srgb,var(--rc) 45%,transparent),transparent 70%);
   animation:gwAura 2.4s ease-in-out infinite}
 @keyframes gwAura{50%{transform:translateX(-50%) scale(1.08);opacity:.75}}
-.gws{position:absolute;width:58px;height:58px;border-radius:12px;border:1px dashed var(--line);
+.gw-slots{display:flex;flex-direction:column;gap:8px;z-index:2}
+.gws{position:relative;width:64px;height:66px;border-radius:12px;border:1px dashed var(--line);
   background:rgba(5,7,15,.75);cursor:pointer;transition:.15s;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;color:var(--txt);font-size:22px;padding:0;z-index:2}
-.gws i{font-style:normal;font-size:8px;letter-spacing:-1px;margin-top:1px;color:var(--rar)}
+  align-items:center;justify-content:center;gap:2px;color:var(--txt);padding:0}
 .gws:hover{transform:scale(1.07)}
+.gws-ico{font-size:21px;line-height:1;filter:drop-shadow(0 0 6px var(--rar,transparent))}
+.gws i{font-style:normal;font-size:8px;letter-spacing:-1px;color:var(--rar)}
+.gws-lbl{font-family:'Orbitron';font-weight:700;font-size:7px;letter-spacing:.5px;color:var(--muted)}
 .gws.filled{border:1px solid var(--rar);box-shadow:0 0 16px color-mix(in srgb,var(--rar) 45%,transparent);
   animation:gwSlot 2s ease-in-out infinite}
 @keyframes gwSlot{50%{box-shadow:0 0 24px color-mix(in srgb,var(--rar) 65%,transparent)}}
-.gws.p-tl{left:6px;top:14px}.gws.p-tr{right:6px;top:14px}
-.gws.p-bl{left:6px;bottom:14px}.gws.p-br{right:6px;bottom:14px}
+/* tooltip dos slots abre para baixo (o retrato fica ao centro) */
+.gws .gtip{top:calc(100% + 9px);bottom:auto;transform:translateX(-50%) translateY(-5px)}
+.gws:hover .gtip{transform:translateX(-50%) translateY(0)}
 .gw-name{font-family:'Orbitron';font-weight:900;font-size:19px;letter-spacing:1px;display:flex;
   align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
 .gw-stars{font-size:11px}
@@ -313,12 +317,60 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
 .gw-sk:hover{border-color:var(--aether);transform:translateY(-2px)}
 .gw-sk.img img{width:100%;height:100%;object-fit:cover}
 
-/* --- direita: inventário --- */
+/* --- direita: inventário (grade de ícones quadrados + tooltip) --- */
 .gw-inv{display:flex;flex-direction:column;min-height:0}
 .gear-filters.inwrap{padding:0 0 10px}
 .gw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;
   overflow-y:auto;max-height:56vh;padding:2px 2px 6px}
-.gw-grid .gear-card{cursor:pointer}
+.gw-grid.gi-grid{grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:9px;
+  overflow:visible;max-height:none;padding:2px;align-content:start}
+/* ícone quadrado da peça */
+.gi{position:relative;aspect-ratio:1;border-radius:12px;cursor:pointer;
+  background:linear-gradient(180deg,#10162e,#080b1a);border:1px solid color-mix(in srgb,var(--rar) 55%,#1c2440);
+  display:flex;align-items:center;justify-content:center;transition:.15s;
+  box-shadow:inset 0 0 12px color-mix(in srgb,var(--rar) 12%,transparent)}
+.gi:hover{transform:translateY(-3px) scale(1.06);z-index:30;
+  box-shadow:0 8px 22px rgba(0,0,0,.5),0 0 16px color-mix(in srgb,var(--rar) 45%,transparent);
+  border-color:var(--rar)}
+.gi::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;border-radius:12px 12px 0 0;
+  background:linear-gradient(90deg,transparent,var(--rar),transparent);opacity:.85}
+.gi-ico{font-size:26px;filter:drop-shadow(0 0 8px var(--rar));pointer-events:none}
+.gi-stars{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:7px;
+  letter-spacing:-1px;pointer-events:none;text-shadow:0 1px 2px #000}
+.gi-proc{position:absolute;top:3px;right:5px;font-size:10px;color:var(--gold);
+  text-shadow:0 0 6px var(--gold);pointer-events:none}
+/* tooltip rico (hover) */
+.gtip{position:absolute;bottom:calc(100% + 9px);left:50%;width:228px;z-index:60;
+  transform:translateX(-50%) translateY(5px);opacity:0;visibility:hidden;pointer-events:none;
+  background:linear-gradient(180deg,#131a36,#0a0e20);border:1px solid color-mix(in srgb,var(--rar) 60%,#1c2440);
+  border-radius:12px;padding:11px 12px;text-align:left;cursor:default;transition:.16s;
+  box-shadow:0 14px 34px rgba(0,0,0,.65),0 0 16px color-mix(in srgb,var(--rar) 22%,transparent)}
+.gi:hover .gtip,.gws:hover .gtip{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.gtip.al-l{left:-4px;transform:translateX(0) translateY(5px)}
+.gtip.al-r{left:auto;right:-4px;transform:translateX(0) translateY(5px)}
+.gi:hover .gtip.al-l,.gi:hover .gtip.al-r{transform:translateX(0) translateY(0)}
+.gtip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:7px solid transparent;border-top-color:#0a0e20}
+.gtip.al-l::after{left:36px}.gtip.al-r::after{left:auto;right:26px;transform:none}
+.gws .gtip::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:#0a0e20}
+.gt-name{font-family:'Orbitron';font-weight:900;font-size:13px;letter-spacing:.3px}
+.gt-meta{font-size:9px;letter-spacing:.5px;margin:2px 0 7px}
+.gt-stats{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.gt-stat{font-family:'Orbitron';font-weight:700;font-size:10px;color:var(--aether);
+  background:rgba(58,255,240,.07);border:1px solid rgba(58,255,240,.25);border-radius:6px;padding:2px 6px}
+.gt-proc{font-family:'Orbitron';font-weight:700;font-size:10px;color:var(--gold);letter-spacing:.4px;
+  background:rgba(255,210,63,.07);border:1px solid rgba(255,210,63,.3);border-radius:6px;
+  padding:3px 7px;margin-bottom:6px;width:fit-content}
+.gt-desc{font-size:11px;color:var(--muted);line-height:1.45;font-style:italic}
+.gt-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;
+  border-top:1px solid var(--line);padding-top:7px}
+.gt-hint{font-size:9px;color:var(--muted);letter-spacing:.3px}
+.gt-salv{font-family:'Orbitron';font-weight:700;font-size:10px;color:var(--gold);cursor:pointer;
+  background:rgba(255,210,63,.08);border:1px solid rgba(255,210,63,.35);border-radius:7px;
+  padding:4px 8px;transition:.15s;white-space:nowrap}
+.gt-salv:hover{background:rgba(255,210,63,.18);transform:translateY(-1px)}
+/* touch: sem hover — mostra o tooltip ao tocar (classe via JS futura); esconde o lixo nativo */
+@media (hover:none){ .gtip{display:none} }
 .gc-salv{margin-left:auto;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;
   padding:2px 4px;border-radius:6px;transition:.15s;flex-shrink:0}
 .gc-salv:hover{color:var(--gold);background:rgba(255,210,63,.12)}
@@ -327,7 +379,12 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
   .gearwrap{grid-template-columns:1fr}
   .gw-runners{flex-direction:row;overflow-x:auto;max-height:none;padding-bottom:6px}
   .gw-runner{min-width:150px}
-  .gw-grid{max-height:40vh}
+}
+@media(max-width:640px){
+  .gw-portrait{width:138px;height:230px}
+  .gws{width:52px;height:56px}
+  .gws-ico{font-size:17px}
+  .gw-grid.gi-grid{grid-template-columns:repeat(auto-fill,minmax(56px,1fr))}
 }
 
 /* ============================================================

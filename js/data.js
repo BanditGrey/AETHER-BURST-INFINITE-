@@ -203,6 +203,37 @@ const EQUIPMENT_POOL = [
   { name:"Echo Fragment",     slot:"relic",    rarity:"legendary", desc:"Quando um aliado usa Burst, ganha 10% ATQ por 5s.",       proc:"echo_fragment", stats:{ atq: 0.08, hp: 0.06 } },
   { name:"Rift Crystal",      slot:"relic",    rarity:"epic",      desc:"Ataques em inimigos com debuff causam 20% mais dano.",    proc:"rift_crystal", stats:{ atq: 0.09, pen: 6 } },
   { name:"Singularity Core",  slot:"relic",    rarity:"legendary", desc:"Uma vez por combate, sobrevive com 1 HP.",                proc:"singularity_core", stats:{ hp: 0.14, def: 0.10 } },
+
+  /* ---------- ACESSÓRIOS (4 slots novos: anel · brinco · colar · pulseira) ----------
+     Identidade de stats por tipo:
+       ANEL     💍 → precisão letal   (CRT + CDG)
+       BRINCO   ✨ → perfuração/aether (PEN + ACH)
+       COLAR    📿 → vitalidade       (HP + DEF)
+       PULSEIRA ⛓️ → mobilidade       (SPD + EVA)
+     Cada tipo tem uma peça em cada raridade (comum → lendária). */
+  { name:"Copper Band",        slot:"ring",     rarity:"common",    desc:"Aro simples, afiado pela energia do Rift.",        stats:{ crt: 0.03 } },
+  { name:"Falcon Ring",        slot:"ring",     rarity:"uncommon",  desc:"Olho de predador: mira mais certeira.",            stats:{ crt: 0.05, cdg: 0.08 } },
+  { name:"Tempest Loop",       slot:"ring",     rarity:"rare",      desc:"O metal zune com a estática da tempestade.",       stats:{ crt: 0.07, cdg: 0.12 } },
+  { name:"Rift-Eye Band",      slot:"ring",     rarity:"epic",      desc:"Um olho dimensional gravado no aro.",              stats:{ crt: 0.09, cdg: 0.16 } },
+  { name:"Crimson Ouroboros",  slot:"ring",     rarity:"legendary", desc:"A serpente que devora o próprio limite.",          stats:{ crt: 0.12, cdg: 0.22 } },
+
+  { name:"Quartz Stud",        slot:"earring",  rarity:"common",    desc:"Quartzo bruto que capta ecos do Rift.",            stats:{ pen: 3 } },
+  { name:"Spark Drop",         slot:"earring",  rarity:"uncommon",  desc:"Uma faísca suspensa que nunca apaga.",             stats:{ pen: 5, ach: 0.04 } },
+  { name:"Starfall Earring",   slot:"earring",  rarity:"rare",      desc:"Fragmento de estrela cadente.",                    stats:{ pen: 7, ach: 0.07 } },
+  { name:"Void Needle",        slot:"earring",  rarity:"epic",      desc:"Perfura o tecido da realidade.",                   stats:{ pen: 10, ach: 0.09 } },
+  { name:"Singularity Drop",   slot:"earring",  rarity:"legendary", desc:"Um horizonte de eventos em miniatura.",            stats:{ pen: 14, ach: 0.12 } },
+
+  { name:"Traveler's Charm",   slot:"necklace", rarity:"common",    desc:"Amuleto de quem atravessa zonas rachadas.",        stats:{ hp: 0.04 } },
+  { name:"Guardian Pendant",   slot:"necklace", rarity:"uncommon",  desc:"Emite um pulso suave de proteção.",                stats:{ hp: 0.06, def: 0.04 } },
+  { name:"Moonward Collar",    slot:"necklace", rarity:"rare",      desc:"Forjado sob a lua de outra dimensão.",             stats:{ hp: 0.09, def: 0.07 } },
+  { name:"Aether Heart",       slot:"necklace", rarity:"epic",      desc:"Um segundo coração batendo em sincronia.",         stats:{ hp: 0.13, def: 0.10 } },
+  { name:"Void Reliquary",     slot:"necklace", rarity:"legendary", desc:"Relíquia selada com luz do núcleo infinito.",      stats:{ hp: 0.17, def: 0.14 } },
+
+  { name:"Leather Wrap",       slot:"bracelet", rarity:"common",    desc:"Couro de algo que corria muito rápido.",           stats:{ spd: 0.03 } },
+  { name:"Gale Bracelet",      slot:"bracelet", rarity:"uncommon",  desc:"Vento preso em elos de metal.",                    stats:{ spd: 0.05, eva: 0.03 } },
+  { name:"Vortex Bangle",      slot:"bracelet", rarity:"rare",      desc:"Gira sem parar, mesmo no silêncio absoluto.",      stats:{ spd: 0.07, eva: 0.05 } },
+  { name:"Zephyr Cuff",        slot:"bracelet", rarity:"epic",      desc:"Quem o veste chega antes do próprio som.",         stats:{ spd: 0.09, eva: 0.08 } },
+  { name:"Stormdancer's Bind", slot:"bracelet", rarity:"legendary", desc:"A dança da tempestade presa aos pulsos.",          stats:{ spd: 0.12, eva: 0.11 } },
 ];
 
 /* ---------- INFINITY CIRCUIT (árvore de bônus permanentes) ---------- */

@@ -1304,8 +1304,8 @@ function rollDrop() {
 /* ============================================================
    GEAR — equipar de verdade (FASE 4)
    Inventário: G._loot (cap alto). Equipado: runnerLevels[id].gear
-   = mapa { weapon|armor|core|relic -> item }. computeStats aplica
-   os stats (loop já existente sobre unit.gear).
+   = mapa { weapon|armor|core|relic|ring|earring|necklace|bracelet -> item }.
+   computeStats aplica os stats (loop já existente sobre unit.gear).
    ============================================================ */
 const LOOT_CAP = 500;   // espaço de sobra — sem exclusão silenciosa
 const SALVAGE_VALUE = { common: 10, uncommon: 25, rare: 60, epic: 150, legendary: 400, aether: 1000 };

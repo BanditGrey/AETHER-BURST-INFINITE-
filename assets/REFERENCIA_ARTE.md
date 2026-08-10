@@ -189,3 +189,22 @@ Fundos de batalha (cenário wide 2:1, sem personagens) em `assets/bg/*.jpg`
 
 > Prompt padrão de fundo: cenário 2D side-scroller wide 2:1, sem personagens/UI/texto,
 > portal de rift no lado direito, paleta da zona (ver `ZONES` no `data.js`).
+
+---
+
+## 💍 ÍCONES DE GEAR — slots (sem arte gerada)
+
+Os ícones das peças de equipamento (grade do inventário e slots do retrato no
+painel RIFT GEAR) são **emoji estilizados com glow da raridade** (CSS `drop-shadow`
++ `--rar`) — decisão proposital: leitura instantânea em 26px sem gerar 30+ artes.
+
+| Slot | Ícone | Identidade de stats |
+|------|-------|---------------------|
+| weapon | ⚔️ | ATQ / ofensivo |
+| armor | 🛡️ | HP / DEF |
+| core | 💠 | Aether / Burst |
+| relic | 🔮 | PROCS especiais |
+| ring | 💍 | CRT / CDG |
+| earring | ✨ | PEN / ACH |
+| necklace | 📿 | HP / DEF |
+| bracelet | ⛓️ | SPD / EVA |
