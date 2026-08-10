@@ -794,7 +794,7 @@ function openPanel(view) {
   if (view === 'squad') c.innerHTML = panelSquad();
   else if (view === 'codex') c.innerHTML = panelCodex();
   else if (view === 'infinity') { c.innerHTML = panelInfinity(); setTimeout(bindCircuit,0); }
-  else if (view === 'gear') c.innerHTML = panelGear();
+  else if (view === 'gear') { c.innerHTML = panelGear(); setTimeout(bindGear, 0); }
   else if (view === 'dungeons') c.innerHTML = panelDungeons();
   else if (view === 'ascension') { c.innerHTML = panelAscension(); setTimeout(bindAscension,0); }
   bindPanel();
@@ -958,23 +958,145 @@ function bindCircuit() {
   });
 }
 
+/* estado do inventário (filtro/ordenação) — persiste entre aberturas do painel */
+const GEAR_UI = { slot: "all", sort: "rarity", choosing: null };
+const GEAR_SLOTS = [
+  { id: "weapon", name: "Armas",      icon: "⚔️" },
+  { id: "armor",  name: "Armaduras",  icon: "🛡️" },
+  { id: "core",   name: "Núcleos",    icon: "💠" },
+  { id: "relic",  name: "Relíquias",  icon: "🔮" },
+];
+function slotIcon(s){ return (GEAR_SLOTS.find(g=>g.id===s)||{}).icon || "📦"; }
+function slotName(s){ return {weapon:'Burst Weapon',armor:'Rift Armor',core:'Aether Core',relic:'Infinity Relic'}[s]||s; }
+/* linhas de stats como chips legíveis: "+10% ATQ" */
+function gearStatChips(it) {
+  const LBL = { atq:"ATQ", hp:"HP", def:"DEF", spd:"SPD", ach:"AETHER" };
+  const PCT100 = { crt:"CRT", cdg:"CDG", eva:"EVA", pen:"PEN" };
+  const chips = [];
+  for (const k in (it.stats||{})) {
+    const v = it.stats[k];
+    if (LBL[k])       chips.push(`+${Math.round(v*100)}% ${LBL[k]}`);
+    else if (PCT100[k]) chips.push(`+${Math.round(v*100)}% ${PCT100[k]}`);
+  }
+  return chips;
+}
+
 function panelGear() {
   const loot = G._loot || [];
-  let h = `<h2>RIFT GEAR</h2><div class="panel-sub">Equipamentos coletados na marcha e dungeons. ${loot.length} itens no inventário.</div>`;
-  if (!loot.length) { h += `<div style="padding:0 24px 24px;color:var(--muted)">Nenhum equipamento ainda — derrote Elite e Bosses para dropar.</div>`; return h; }
-  h += `<div class="loot-grid">`;
-  for (const it of loot.slice().reverse()) {
+  const owned = G.ownedRunners.filter(id => RUNNER_BY_ID[id]);
+  const squad = G.squadIds.slice(0, SQUAD_SLOTS).filter(Boolean);
+  const order = [...squad, ...owned.filter(id => !squad.includes(id))];
+
+  let h = `<h2>RIFT GEAR</h2>
+    <div class="panel-sub">Armas, armaduras, núcleos e relíquias — equipe até <b>4 peças</b> por Runner.
+    Inventário com espaço de sobra (<b>${loot.length}/${LOOT_CAP}</b>): reciclar é escolha, não obrigação, e rende 💎.</div>`;
+
+  /* ---------- LOADOUT ---------- */
+  h += `<div class="gear-section">⚡ LOADOUT DO ELENCO</div>`;
+  h += `<div class="loadout-list">`;
+  for (const id of order) {
+    const r = RUNNER_BY_ID[id];
+    const gear = runnerGear(id);
+    const inSquad = squad.includes(id);
+    h += `<div class="loadout-row ${inSquad?'on-squad':''}">
+      <div class="lo-ava" style="background:linear-gradient(180deg,${lighten(r.color,.2)},${r.color})">${r.name.slice(0,2)}</div>
+      <div class="lo-name">${r.name}${inSquad?'<span class="lo-squad-tag">SQUAD</span>':''}</div>
+      ${GEAR_SLOTS.map(gs=>{
+        const it = gear[gs.id];
+        const rar = it && RARITIES[it.rarity];
+        return `<button class="lo-slot ${it?'filled':''}" data-unequip="${id}:${gs.id}"
+          style="${it?`border-color:${rar.color};box-shadow:0 0 10px ${rar.color}44`:''}"
+          title="${it? `${it.name} — clique para desequipar` : slotName(gs.id)+' vazio'}">
+          <span class="lo-ico">${it? gs.icon : '<span style="opacity:.25">'+gs.icon+'</span>'}</span>
+          ${it?`<span class="lo-stars" style="color:${rar.color}">${'★'.repeat(rar.stars)}</span>`:''}
+        </button>`;
+      }).join("")}
+    </div>`;
+  }
+  h += `</div>`;
+
+  /* ---------- INVENTÁRIO ---------- */
+  const counts = { all: loot.length };
+  for (const gs of GEAR_SLOTS) counts[gs.id] = loot.filter(it => it.slot === gs.id).length;
+  h += `<div class="gear-section">📦 INVENTÁRIO <span class="gear-count">${counts.all}/${LOOT_CAP}</span></div>`;
+  h += `<div class="gear-filters">
+    ${[["all","Todos","🎒"], ...GEAR_SLOTS.map(gs=>[gs.id, gs.name, gs.icon])].map(([id,name,ico])=>
+      `<button class="gear-tab ${GEAR_UI.slot===id?'active':''}" data-gslot="${id}">${ico} ${name} <span class="gt-count">${counts[id]||0}</span></button>`).join("")}
+    <span class="gear-sortwrap">Ordenar
+      <select id="gearSort">
+        <option value="rarity" ${GEAR_UI.sort==='rarity'?'selected':''}>Raridade</option>
+        <option value="slot" ${GEAR_UI.sort==='slot'?'selected':''}>Tipo</option>
+        <option value="name" ${GEAR_UI.sort==='name'?'selected':''}>Nome</option>
+      </select>
+    </span>
+    <button class="gear-salvage-all" title="Recicla todas as peças Comuns e Incomuns (não-equipadas)">♻ Reciclar comuns+incomuns</button>
+  </div>`;
+
+  let items = loot.filter(it => GEAR_UI.slot === "all" || it.slot === GEAR_UI.slot);
+  const rarRank = r => Object.keys(RARITIES).indexOf(r);
+  if (GEAR_UI.sort === "rarity") items = items.slice().sort((a,b)=> rarRank(b.rarity)-rarRank(a.rarity) || a.name.localeCompare(b.name));
+  else if (GEAR_UI.sort === "slot") items = items.slice().sort((a,b)=> a.slot.localeCompare(b.slot) || rarRank(b.rarity)-rarRank(a.rarity));
+  else items = items.slice().sort((a,b)=> a.name.localeCompare(b.name));
+
+  if (!items.length) h += `<div class="gear-empty">Nada aqui ainda — Elites e Bosses dropam gear; dungeons também. 🌀</div>`;
+  h += `<div class="gear-grid">`;
+  for (const it of items) {
     const rar = RARITIES[it.rarity];
-    h += `<div class="loot-item" style="border-color:${rar.color}">
-      <div class="li-name" style="color:${rar.color}">${it.name} <span style="font-size:10px">${'★'.repeat(rar.stars)}</span></div>
-      <div class="li-desc">${it.desc}</div>
-      <div class="li-desc" style="color:var(--aether);margin-top:4px">${slotName(it.slot)}</div>
+    const chips = gearStatChips(it).map(c=>`<span class="gchip">${c}</span>`).join("");
+    const choosing = GEAR_UI.choosing === it.uid;
+    h += `<div class="gear-card" style="--rar:${rar.color}" data-uid="${it.uid}">
+      <div class="gc-head">
+        <span class="gc-ico">${slotIcon(it.slot)}</span>
+        <div class="gc-title"><div class="gc-name" style="color:${rar.color}">${it.name}</div>
+        <div class="gc-meta">${'★'.repeat(rar.stars)} ${rar.name} · ${slotName(it.slot)}</div></div>
+      </div>
+      <div class="gc-stats">${chips}</div>
+      <div class="gc-desc">${it.desc}</div>
+      <div class="gc-actions">
+        <button class="gc-btn equip" data-equip="${it.uid}">${choosing ? "✕ cancelar" : "⇪ EQUIPAR"}</button>
+        <button class="gc-btn salvage" data-salvage="${it.uid}" title="Reciclar por ${SALVAGE_VALUE[it.rarity]||10} 💎">♻ +${SALVAGE_VALUE[it.rarity]||10}</button>
+      </div>
+      ${choosing ? `<div class="gc-pick">equipar em: ${order.map(id=>{
+          const r2 = RUNNER_BY_ID[id];
+          return `<button class="gc-chip" data-equipto="${id}:${it.uid}" title="${r2.name}" style="background:linear-gradient(180deg,${lighten(r2.color,.2)},${r2.color})">${r2.name.slice(0,2)}</button>`;
+        }).join("")}</div>` : ""}
     </div>`;
   }
   h += `</div>`;
   return h;
 }
-function slotName(s){ return {weapon:'Burst Weapon',armor:'Rift Armor',core:'Aether Core',relic:'Infinity Relic'}[s]||s; }
+
+function bindGear() {
+  // filtros
+  document.querySelectorAll("[data-gslot]").forEach(b=>b.addEventListener("click", ()=>{ GEAR_UI.slot = b.dataset.gslot; GEAR_UI.choosing = null; openPanel("gear"); }));
+  const sort = $("gearSort");
+  if (sort) sort.addEventListener("change", ()=>{ GEAR_UI.sort = sort.value; openPanel("gear"); });
+  // equipar: 1º clique escolhe a peça, 2º clique no chip do runner confirma
+  document.querySelectorAll("[data-equip]").forEach(b=>b.addEventListener("click", ()=>{
+    const uid = +b.dataset.equip;
+    GEAR_UI.choosing = (GEAR_UI.choosing === uid) ? null : uid;
+    openPanel("gear");
+  }));
+  document.querySelectorAll("[data-equipto]").forEach(b=>b.addEventListener("click", ()=>{
+    const [id, uid] = b.dataset.equipto.split(":");
+    if (equipItem(id, +uid)) { GEAR_UI.choosing = null; sfxLevel(); openPanel("gear"); buildBurstBars(); }
+  }));
+  // desequipar (slots do loadout)
+  document.querySelectorAll("[data-unequip]").forEach(b=>b.addEventListener("click", ()=>{
+    const [id, slot] = b.dataset.unequip.split(":");
+    if (unequipItem(id, slot)) { sfxHit(); openPanel("gear"); }
+  }));
+  // reciclar
+  document.querySelectorAll("[data-salvage]").forEach(b=>b.addEventListener("click", ()=>{
+    if (salvageItem(+b.dataset.salvage)) { sfxHit(); openPanel("gear"); }
+  }));
+  const salAll = document.querySelector(".gear-salvage-all");
+  if (salAll) salAll.addEventListener("click", ()=>{
+    const r = salvageWhere(it => it.rarity === "common" || it.rarity === "uncommon");
+    notify(r.n ? `♻ ${r.n} peças recicladas → +${r.total} 💎` : "Nenhuma peça comum/incomum pra reciclar");
+    sfxHit(); openPanel("gear");
+  });
+}
 
 function panelDungeons() {
   const dungs = [

@@ -251,6 +251,78 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
   border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;animation:toastIn .3s ease-out;box-shadow:0 6px 20px rgba(0,0,0,.5)}
 @keyframes toastIn{from{opacity:0;transform:translateX(30px)}}
 
+/* ============================================================
+   FASE 4 — RIFT GEAR: inventário organizado
+   ============================================================ */
+.gear-section{font-family:'Orbitron';font-weight:900;font-size:13px;letter-spacing:2px;color:var(--aether);
+  padding:6px 24px 10px;display:flex;align-items:center;gap:8px}
+.gear-section::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.gear-count{font-size:11px;color:var(--muted);background:#0a0e22;border:1px solid var(--line);
+  border-radius:6px;padding:2px 8px}
+
+/* ---------- LOADOUT ---------- */
+.loadout-list{display:flex;flex-direction:column;gap:8px;padding:0 24px 16px}
+.loadout-row{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--line);
+  border-radius:12px;padding:8px 12px}
+.loadout-row.on-squad{border-color:rgba(58,255,240,.35);box-shadow:0 0 14px rgba(58,255,240,.08)}
+.lo-ava{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  font-family:'Orbitron';font-weight:900;font-size:14px;color:#04211f;flex-shrink:0}
+.lo-name{font-family:'Orbitron';font-weight:700;font-size:13px;min-width:74px;display:flex;flex-direction:column;gap:2px}
+.lo-squad-tag{font-size:8px;letter-spacing:1px;color:#04211f;background:var(--aether);border-radius:4px;
+  padding:1px 5px;width:fit-content}
+.lo-slot{width:52px;height:44px;border-radius:10px;border:1px dashed var(--line);background:#0a0e22;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+  transition:.15s;flex-shrink:0;font-size:15px;color:var(--txt);padding:0}
+.lo-slot:hover{transform:translateY(-1px);border-color:var(--aether)}
+.lo-slot.filled{border-style:solid}
+.lo-slot .lo-ico{font-size:15px;line-height:1}
+.lo-slot .lo-stars{font-size:8px;letter-spacing:-1px;margin-top:2px}
+
+/* ---------- FILTROS ---------- */
+.gear-filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 24px 12px}
+.gear-tab{font-family:'Orbitron';font-weight:700;font-size:11px;letter-spacing:.5px;color:var(--muted);
+  background:#0a0e22;border:1px solid var(--line);border-radius:9px;padding:7px 10px;cursor:pointer;transition:.15s}
+.gear-tab:hover{color:var(--txt);border-color:var(--aether)}
+.gear-tab.active{color:var(--aether);border-color:var(--aether);background:rgba(58,255,240,.07);
+  box-shadow:0 0 12px rgba(58,255,240,.15)}
+.gt-count{opacity:.7;font-size:10px;background:#05070f;border-radius:5px;padding:1px 5px}
+.gear-sortwrap{margin-left:auto;font-family:'Orbitron';font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.gear-sortwrap select{background:#0a0e22;color:var(--txt);border:1px solid var(--line);border-radius:8px;
+  font-family:'Orbitron';font-size:11px;padding:6px 8px;cursor:pointer}
+.gear-salvage-all{font-family:'Orbitron';font-weight:700;font-size:11px;color:var(--gold);
+  background:transparent;border:1px solid var(--gold);border-radius:9px;padding:7px 12px;cursor:pointer;transition:.15s}
+.gear-salvage-all:hover{background:rgba(255,210,63,.12)}
+
+/* ---------- GRID DE PEÇAS ---------- */
+.gear-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;padding:0 24px 24px}
+.gear-card{background:linear-gradient(180deg,var(--bg2),#0a0e20);border:1px solid var(--rar,#2a3358);
+  border-radius:12px;padding:10px 12px;position:relative;overflow:hidden;transition:.15s}
+.gear-card::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--rar,#2a3358),transparent);opacity:.8}
+.gear-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.5);
+  box-shadow:0 8px 22px rgba(0,0,0,.5),0 0 14px color-mix(in srgb,var(--rar) 25%,transparent)}
+.gc-head{display:flex;gap:9px;align-items:center}
+.gc-ico{font-size:22px;filter:drop-shadow(0 0 6px var(--rar))}
+.gc-name{font-family:'Orbitron';font-weight:900;font-size:13px;letter-spacing:.3px}
+.gc-meta{font-size:10px;color:var(--muted);letter-spacing:.5px;margin-top:2px}
+.gc-stats{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 6px}
+.gchip{font-family:'Orbitron';font-weight:700;font-size:10px;color:var(--aether);
+  background:rgba(58,255,240,.07);border:1px solid rgba(58,255,240,.25);border-radius:6px;padding:2px 6px}
+.gc-desc{font-size:11px;color:var(--muted);line-height:1.45;min-height:30px}
+.gc-actions{display:flex;gap:6px;margin-top:8px}
+.gc-btn{font-family:'Orbitron';font-weight:700;font-size:10px;letter-spacing:.5px;border-radius:7px;
+  padding:6px 10px;cursor:pointer;transition:.15s;border:1px solid var(--line);background:#0a0e22;color:var(--txt)}
+.gc-btn:hover{transform:translateY(-1px)}
+.gc-btn.equip{border-color:var(--aether);color:var(--aether)}
+.gc-btn.equip:hover{background:rgba(58,255,240,.12)}
+.gc-btn.salvage:hover{border-color:var(--gold);color:var(--gold)}
+.gc-pick{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;padding-top:8px;
+  border-top:1px dashed var(--line);font-size:11px;color:var(--muted)}
+.gc-chip{width:32px;height:32px;border-radius:8px;border:none;font-family:'Orbitron';font-weight:900;
+  font-size:11px;color:#04211f;cursor:pointer;transition:.15s}
+.gc-chip:hover{transform:scale(1.12);box-shadow:0 0 12px rgba(255,255,255,.35)}
+.gear-empty{color:var(--muted);padding:0 24px 18px;font-size:13px}
+
 .hidden{display:none!important}
 
 /* scrollbars */

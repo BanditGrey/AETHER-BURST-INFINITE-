@@ -50,7 +50,7 @@ Base gráfica em 2 motores (Canvas + WebGL/Pixi), sprites dos Runners no padrão
 - [x] **UI com cara de jogo** — tela de título/splash (libera o áudio no clique), wipe cinematográfico ao trocar de zona, overlay de pausa, cards de painel com entrada escalonada, botão ✕ estilizado, chanfros e brilho varrendo
 
 ### FASE 4 — Conteúdo & profundidade (pendente)
-- [ ] Equipar gear de verdade (slots + efeitos aplicados)
+- [x] **Equipar gear de verdade + inventário organizado** — loadout por runner (⚔🛡💠🔮 com glow de raridade), stats reais via computeStats, uid por peça, cap 500 (sem apagar nada), reciclar opcional em massa p/ 💎, tudo persistido no save
 - [ ] Achievements / conquistas
 - [ ] Balanceamento fino (progressão, drop, dificuldade)
 - [ ] Mais zonas/conteúdo (além das 7 do MVP)

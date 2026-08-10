@@ -266,12 +266,12 @@ function infinityBonuses() {
    ============================================================ */
 function makeRunner(id, slotIndex) {
   const data = RUNNER_BY_ID[id];
-  const lvlInfo = G.runnerLevels[id] || { level: 1, xp: 0, gear: [] };
+  const lvlInfo = G.runnerLevels[id] || { level: 1, xp: 0, gear: {} };
   const u = {
     kind: "runner",
     id, data,
     level: lvlInfo.level,
-    gear: lvlInfo.gear || [],
+    gear: equippedList(id),
     element: data.element,
     color: data.color,
     accent: data.accent,
@@ -1210,6 +1210,8 @@ function banner(text, sub, color) {
    DROP DE EQUIPAMENTO
    ============================================================ */
 function rollDrop() {
+  // inventário alto: 500 slots — reciclar é escolha, nunca obrigação
+  if ((G._loot || []).length >= LOOT_CAP) { notify("Inventário cheio (" + LOOT_CAP + ") — nada descartado; recicle quando quiser ♻", "#ff5a5c"); return null; }
   // raridade ponderada
   const roll = Math.random();
   let rarity = "common";
@@ -1220,11 +1222,89 @@ function rollDrop() {
   const pool = EQUIPMENT_POOL.filter(e => e.rarity === rarity);
   const eq = (pool.length ? pool : EQUIPMENT_POOL)[Math.floor(Math.random()*(pool.length||EQUIPMENT_POOL.length))];
   const copy = JSON.parse(JSON.stringify(eq));
+  copy.uid = nextUid();
   G._loot = G._loot || [];
   G._loot.push(copy);
-  if (G._loot.length > 40) G._loot.shift();
   FX.floatText(ENGAGE_X+60, GROUND_Y-90, "LOOT: " + copy.name, { color: RARITIES[rarity].color, size: 16, life: 1.6 });
   notify("Loot: " + copy.name, RARITIES[rarity].color);
+  return copy;
+}
+
+/* ============================================================
+   GEAR — equipar de verdade (FASE 4)
+   Inventário: G._loot (cap alto). Equipado: runnerLevels[id].gear
+   = mapa { weapon|armor|core|relic -> item }. computeStats aplica
+   os stats (loop já existente sobre unit.gear).
+   ============================================================ */
+const LOOT_CAP = 500;   // espaço de sobra — sem exclusão silenciosa
+const SALVAGE_VALUE = { common: 10, uncommon: 25, rare: 60, epic: 150, legendary: 400, aether: 1000 };
+
+function nextUid() { G._uidSeq = (G._uidSeq || 0) + 1; return G._uidSeq; }
+
+/* mapa de gear equipado do runner (converte o [] legado para {}) */
+function runnerGear(id) {
+  const li = G.runnerLevels[id];
+  if (!li) return {};
+  if (!li.gear || Array.isArray(li.gear)) li.gear = {};
+  return li.gear;
+}
+/* lista de itens equipados, na forma que computeStats consome (array) */
+function equippedList(id) { return Object.values(runnerGear(id)).filter(Boolean); }
+
+function equipItem(runnerId, uid) {
+  G._loot = G._loot || [];
+  const idx = G._loot.findIndex(it => it.uid === uid);
+  if (idx < 0) return false;
+  const r = RUNNER_BY_ID[runnerId]; if (!r) return false;
+  const item = G._loot[idx];
+  const gear = runnerGear(runnerId);
+  const cur = gear[item.slot];
+  G._loot.splice(idx, 1);
+  if (cur) G._loot.push(cur);            // troca: a peça antiga volta pro inventário
+  gear[item.slot] = item;
+  syncLiveGear(); save();
+  notify("⚔ " + item.name + " → " + r.name, RARITIES[item.rarity].color);
+  return true;
+}
+function unequipItem(runnerId, slot) {
+  const gear = runnerGear(runnerId);
+  const cur = gear[slot];
+  if (!cur) return false;
+  G._loot = G._loot || [];
+  if (G._loot.length >= LOOT_CAP) { notify("Inventário cheio — recicle algo antes de desequipar", "#ff5a5c"); return false; }
+  delete gear[slot];
+  G._loot.push(cur);
+  syncLiveGear(); save();
+  notify("↓ " + cur.name + " voltou ao inventário");
+  return true;
+}
+function salvageItem(uid) {
+  G._loot = G._loot || [];
+  const idx = G._loot.findIndex(it => it.uid === uid);
+  if (idx < 0) return 0;
+  const it = G._loot[idx];
+  G._loot.splice(idx, 1);
+  const val = SALVAGE_VALUE[it.rarity] || 10;
+  G.shards += val; save();
+  notify("♻ " + it.name + " → +" + val + " 💎", (RARITIES[it.rarity] || {}).color);
+  return val;
+}
+/* recicla em massa por predicado (ex.: todos os comuns) */
+function salvageWhere(pred) {
+  let total = 0, n = 0;
+  G._loot = (G._loot || []).filter(it => { if (pred(it)) { total += SALVAGE_VALUE[it.rarity] || 10; n++; return false; } return true; });
+  if (total) { G.shards += total; save(); }
+  return { total, n };
+}
+/* re-aplica gear nas unidades vivas (mantendo proporção de HP/estado) */
+function syncLiveGear() {
+  for (const r of (G.runners || [])) {
+    r.gear = equippedList(r.id);
+    const hpRatio = (r.maxHp > 0) ? r.hp / r.maxHp : 1;
+    r._atqBase = null;                 // cache do Zael invalidado
+    computeStats(r);
+    if (r.alive) r.hp = Math.min(r.maxHp, Math.max(1, Math.round(r.maxHp * hpRatio)));
+  }
 }
 
 /* ============================================================
@@ -1240,7 +1320,7 @@ function save() {
     resonance: G.resonance, infinity: G.infinity, lastSeen: G.lastSeen, stats: G.stats,
     ascension: G.ascension, ascensionPoints: G.ascensionPoints,
     codex: G.codex, codexDone: G.codexDone,
-    loot: G._loot || [],
+    loot: G._loot || [], uidSeq: G._uidSeq || 0,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch(e){}
 }
@@ -1251,6 +1331,8 @@ function load() {
     const d = JSON.parse(raw);
     Object.assign(G, d);
     G._loot = d.loot || [];
+    G._uidSeq = d.uidSeq || (G._loot.length ? G._loot.length * 1000 : 0);
+    for (const it of G._loot) if (it.uid == null) it.uid = nextUid();
     // normaliza saves antigos que não têm os campos novos
     if (!G.ascension) G.ascension = {};
     if (!G.ascensionPoints) G.ascensionPoints = 0;
@@ -1289,6 +1371,6 @@ function offlineReport() {
   G.stats.kills += kills; G.stats.bursts += bursts;
   // drop simulado
   const drops = [];
-  for (let i=0;i<Math.min(6, Math.floor(elapsed/600)); i++){ rollDrop(); if(G._loot&&G._loot.length) drops.push(G._loot[G._loot.length-1]); }
+  for (let i=0;i<Math.min(6, Math.floor(elapsed/600)); i++){ const d2 = rollDrop(); if (d2) drops.push(d2); }
   return { elapsed, shards, xp, kills, bursts, drops };
 }
