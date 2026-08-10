@@ -794,7 +794,7 @@ function buildResonanceStrip() {
 }
 
 /* ---------- Painéis ---------- */
-function openPanel(view) {
+function openPanel(view, noAuto) {
   G.view = view;
   gtipHide();
   // botão Progresso: abre o dashboard do projeto (página separada)
@@ -810,6 +810,8 @@ function openPanel(view) {
   else if (view === 'gear') { c.innerHTML = panelGear(); setTimeout(bindGear, 0); }
   else if (view === 'dungeons') c.innerHTML = panelDungeons();
   else if (view === 'ascension') { c.innerHTML = panelAscension(); setTimeout(bindAscension,0); }
+  // noAuto=true p/ reabrir o painel de resultados sem reiniciar a suíte
+  else if (view === 'selftest') { c.innerHTML = panelSelftest(); if (!noAuto) setTimeout(runSelftestUI, 30); }
   bindPanel();
 }
 
@@ -1449,6 +1451,7 @@ function bindAscension() {
 
 /* ---------- Toasts ---------- */
 function notify(msg, color) {
+  if (window.__ST_QUIET) return;   // suíte de auto-teste rodando: sem flood de toasts
   const t = document.createElement('div');
   t.className = 'toast'; if(color) t.style.borderLeftColor = color;
   t.textContent = msg;
@@ -1535,6 +1538,13 @@ function boot() {
   };
   if (splash) $('splashStart').addEventListener('click', begin);
   else { if (rep) showReport(rep); banner('AETHER BURST: INFINITE', 'Burst Beyond Limits', '#3afff0'); }
+
+  // auto-teste headless/CI: ?selftest=1 pula o splash e roda a suíte completa
+  // (o resultado vai para window.__selftestResults — usado pelo harness externo)
+  if (/[?&]selftest=1/.test(location.search)) {
+    setTimeout(()=>{ if (splash) { splash.dataset.done='1'; splash.classList.add('out'); setTimeout(()=>splash.remove(), 300); } }, 400);
+    setTimeout(()=>openPanel('selftest'), 900);
+  }
 
   requestAnimationFrame(loop);
 }

@@ -72,6 +72,8 @@ PIXI.Graphics/Text/Sprite; a lógica (`engine/data/fx/main-UI`) é idêntica nas
 
 ## 🧪 Testes headless
 
+**No jogo:** botão **🧪 Testes** na navbar — auto-teste com "olho humano" (análise de pixels dos sprites, geometria real dos painéis, clique físico, profundidade da cena, raio serrilhado…), 20 frentes em `js/selftest.js`. Regra do repo: **feature nova ⇒ entrada nova no `SELFTESTS`**. Para CI/headless: `index.html?selftest=1` roda sozinho e expõe `window.__selftestResults`.
+
 Suítes em `tests/` (fora do git — ver `.gitignore`), rodam com Node puro (vm) + jsdom:
 
 ```bash
@@ -79,6 +81,6 @@ node tests/test_gear.js     # gear: drops, equipar slots/acessórios, cap, save/
 node tests/test_dmg.js      # números de dano por tipo/eficácia, escudo real (19)
 node tests/test_skills2.js  # 15 sprites de skill + pulsos (6)
 node tests/test_procs.js    # os 11 gear procs (17)
-node tests/test_ui.js       # markup do painel RIFT GEAR (6)
-node tests/smoke_ui.js      # jsdom: splash, wipe, pausa, painéis (20) — precisa: npm i --prefix ~/.uitest jsdom
+node tests/test_ui.js       # markup do painel RIFT GEAR + registro do auto-teste (13)
+node tests/smoke_ui.js      # jsdom: splash, wipe, pausa, painéis (23) — precisa: npm i --prefix ~/.uitest jsdom
 ```
