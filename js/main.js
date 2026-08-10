@@ -790,6 +790,7 @@ function openPanel(view) {
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
   if (view === 'march') { $('panel-overlay').classList.add('hidden'); return; }
   $('panel-overlay').classList.remove('hidden');
+  $('panel').classList.toggle('gear-wide', view === 'gear');
   const c = $('panelContent');
   if (view === 'squad') c.innerHTML = panelSquad();
   else if (view === 'codex') c.innerHTML = panelCodex();
@@ -958,8 +959,12 @@ function bindCircuit() {
   });
 }
 
-/* estado do inventário (filtro/ordenação) — persiste entre aberturas do painel */
-const GEAR_UI = { slot: "all", sort: "rarity", choosing: null };
+/* ============================================================
+   RIFT GEAR — painel estilo "tela de equipamento de jogo"
+   (runner ao centro com sprite, slots ao redor, stats, skills;
+   lista de runners à esquerda; inventário em grid à direita)
+   ============================================================ */
+const GEAR_UI = { slot: "all", sort: "rarity", runner: null };
 const GEAR_SLOTS = [
   { id: "weapon", name: "Armas",      icon: "⚔️" },
   { id: "armor",  name: "Armaduras",  icon: "🛡️" },
@@ -968,7 +973,12 @@ const GEAR_SLOTS = [
 ];
 function slotIcon(s){ return (GEAR_SLOTS.find(g=>g.id===s)||{}).icon || "📦"; }
 function slotName(s){ return {weapon:'Burst Weapon',armor:'Rift Armor',core:'Aether Core',relic:'Infinity Relic'}[s]||s; }
-/* linhas de stats como chips legíveis: "+10% ATQ" */
+/* sprite de skill por runner — usado como ícone no painel */
+const RUNNER_SKILL_SPRITE = {
+  kairo: "kairo_volt_fang", zael: "zael_crimson_slash", seraph: "seraph_event_horizon",
+  lyra: "lyra_radiant_strike", frost: "frost_glacial_lance", nina: "nina_surge_cannon",
+  rex: "rex_savage_charge", sable: "sable_shadow_execution",
+};
 function gearStatChips(it) {
   const LBL = { atq:"ATQ", hp:"HP", def:"DEF", spd:"SPD", ach:"AETHER" };
   const PCT100 = { crt:"CRT", cdg:"CDG", eva:"EVA", pen:"PEN" };
@@ -980,57 +990,109 @@ function gearStatChips(it) {
   }
   return chips;
 }
+/* "poder de combate" exibido no retrato — sobe com gear e nível */
+function runnerPower(u) {
+  return Math.round(u.maxHp*0.10 + u.atq*6 + u.def*3 + u.spd*10 + (u.crt*100)*8 + (u.cdg*100)*2 + (u.eva*100)*8 + (u.pen*100)*4 + u.ach*100);
+}
 
 function panelGear() {
   const loot = G._loot || [];
   const owned = G.ownedRunners.filter(id => RUNNER_BY_ID[id]);
   const squad = G.squadIds.slice(0, SQUAD_SLOTS).filter(Boolean);
   const order = [...squad, ...owned.filter(id => !squad.includes(id))];
+  if (!GEAR_UI.runner || !owned.includes(GEAR_UI.runner)) GEAR_UI.runner = order[0] || null;
+  const sel = GEAR_UI.runner;
 
   let h = `<h2>RIFT GEAR</h2>
-    <div class="panel-sub">Armas, armaduras, núcleos e relíquias — equipe até <b>4 peças</b> por Runner.
-    Inventário com espaço de sobra (<b>${loot.length}/${LOOT_CAP}</b>): reciclar é escolha, não obrigação, e rende 💎.</div>`;
+    <div class="panel-sub">Escolha um Runner à esquerda, clique numa peça do inventário para equipar.
+    Slots brilhando = preenchidos (clique p/ desequipar). Inventário: <b>${loot.length}/${LOOT_CAP}</b> — reciclar é opcional e rende 💎.</div>`;
+  h += `<div class="gearwrap">`;
 
-  /* ---------- LOADOUT ---------- */
-  h += `<div class="gear-section">⚡ LOADOUT DO ELENCO</div>`;
-  h += `<div class="loadout-list">`;
+  /* ---------- ESQUERDA: lista de runners ---------- */
+  h += `<div class="gw-runners">`;
   for (const id of order) {
     const r = RUNNER_BY_ID[id];
-    const gear = runnerGear(id);
-    const inSquad = squad.includes(id);
-    h += `<div class="loadout-row ${inSquad?'on-squad':''}">
-      <div class="lo-ava" style="background:linear-gradient(180deg,${lighten(r.color,.2)},${r.color})">${r.name.slice(0,2)}</div>
-      <div class="lo-name">${r.name}${inSquad?'<span class="lo-squad-tag">SQUAD</span>':''}</div>
-      ${GEAR_SLOTS.map(gs=>{
-        const it = gear[gs.id];
-        const rar = it && RARITIES[it.rarity];
-        return `<button class="lo-slot ${it?'filled':''}" data-unequip="${id}:${gs.id}"
-          style="${it?`border-color:${rar.color};box-shadow:0 0 10px ${rar.color}44`:''}"
-          title="${it? `${it.name} — clique para desequipar` : slotName(gs.id)+' vazio'}">
-          <span class="lo-ico">${it? gs.icon : '<span style="opacity:.25">'+gs.icon+'</span>'}</span>
-          ${it?`<span class="lo-stars" style="color:${rar.color}">${'★'.repeat(rar.stars)}</span>`:''}
-        </button>`;
-      }).join("")}
-    </div>`;
+    const li = G.runnerLevels[id];
+    const rar = RARITIES[r.rarity];
+    const u = makeRunner(id, 0); u.level = li.level; computeStats(u);
+    h += `<button class="gw-runner ${id===sel?'sel':''}" data-gsel="${id}" style="--rc:${r.color}">
+      <img class="gw-ava" src="assets/runners/${id}.png?v=${SPRITE_V}" alt="${r.name}" onerror="this.style.display='none'"/>
+      <span class="gw-ri">
+        <span class="gw-rname">${r.name}</span>
+        <span class="gw-rstars" style="color:${rar.color}">${'★'.repeat(rar.stars)}</span>
+        <span class="gw-rlv">LV ${li.level} · ⚡${formatNumber(runnerPower(u))}</span>
+      </span>
+      ${squad.includes(id)?'<span class="lo-squad-tag">SQUAD</span>':''}
+    </button>`;
   }
   h += `</div>`;
 
-  /* ---------- INVENTÁRIO ---------- */
+  /* ---------- CENTRO: retrato + slots + stats + skills ---------- */
+  if (sel) {
+    const r = RUNNER_BY_ID[sel];
+    const li = G.runnerLevels[sel];
+    const u = makeRunner(sel, 0); u.level = li.level; computeStats(u);
+    const gear = runnerGear(sel);
+    const rar = RARITIES[r.rarity];
+    const slotBtn = (slotId, pos) => {
+      const it = gear[slotId];
+      const gs = GEAR_SLOTS.find(g=>g.id===slotId);
+      if (it) {
+        const ir = RARITIES[it.rarity];
+        return `<button class="gws filled ${pos}" data-unequip="${sel}:${slotId}" style="--rar:${ir.color}"
+          title="${it.name} (${ir.name}) — clique p/ desequipar"><span>${gs.icon}</span><i>${'★'.repeat(ir.stars)}</i></button>`;
+      }
+      return `<button class="gws ${pos}" data-gshow="${slotId}" title="${slotName(slotId)} vazio — clique p/ filtrar o inventário"><span style="opacity:.3">${gs.icon}</span></button>`;
+    };
+    h += `<div class="gw-detail" style="--rc:${r.color}">
+      <div class="gw-stage">
+        ${slotBtn('weapon','p-tl')}${slotBtn('core','p-tr')}
+        <div class="gw-portrait">
+          <div class="gw-aura"></div>
+          <img src="assets/runners/${sel}.png?v=${SPRITE_V}" alt="${r.name}" onerror="this.style.display='none'"/>
+        </div>
+        ${slotBtn('armor','p-bl')}${slotBtn('relic','p-br')}
+      </div>
+      <div class="gw-name">${ELEMENTS[r.element].icon} ${r.name}
+        <span class="gw-stars" style="color:${rar.color}">${'★'.repeat(rar.stars)}</span>
+        <span class="gw-lv">LV ${li.level}</span></div>
+      <div class="gw-titleline">${r.title} · ${r.cls}</div>
+      <div class="gw-power">PODER <b>${formatNumber(runnerPower(u))}</b></div>
+      <div class="gw-stats">
+        <span>❤️ HP <b>${formatNumber(u.maxHp)}</b></span>
+        <span>⚔️ ATQ <b>${formatNumber(u.atq)}</b></span>
+        <span>🛡️ DEF <b>${formatNumber(u.def)}</b></span>
+        <span>💨 SPD <b>${Math.round(u.spd)}</b></span>
+        <span>🎯 CRT <b>${Math.round(u.crt*100)}%</b></span>
+        <span>💥 CDG <b>${Math.round(u.cdg*100)}%</b></span>
+        <span>🌀 EVA <b>${Math.round(u.eva*100)}%</b></span>
+        <span>🔓 PEN <b>${Math.round(u.pen*100)}%</b></span>
+      </div>
+      <div class="gw-skills">
+        <span class="gw-sk" title="Elemento: ${ELEMENTS[r.element].name}">${ELEMENTS[r.element].icon}</span>
+        <span class="gw-sk" title="Passiva — ${r.passive.name}: ${r.passive.desc}">☆</span>
+        <span class="gw-sk img" title="Skill — ${r.skill.name}: ${r.skill.desc}"><img src="assets/skills/${RUNNER_SKILL_SPRITE[sel]}.png?v=${SPRITE_V}" alt=""/></span>
+        <span class="gw-sk" title="Aether Burst — ${r.burst.name}: ${r.burst.desc}">⚡</span>
+      </div>
+    </div>`;
+  }
+
+  /* ---------- DIREITA: inventário ---------- */
   const counts = { all: loot.length };
   for (const gs of GEAR_SLOTS) counts[gs.id] = loot.filter(it => it.slot === gs.id).length;
-  h += `<div class="gear-section">📦 INVENTÁRIO <span class="gear-count">${counts.all}/${LOOT_CAP}</span></div>`;
-  h += `<div class="gear-filters">
-    ${[["all","Todos","🎒"], ...GEAR_SLOTS.map(gs=>[gs.id, gs.name, gs.icon])].map(([id,name,ico])=>
-      `<button class="gear-tab ${GEAR_UI.slot===id?'active':''}" data-gslot="${id}">${ico} ${name} <span class="gt-count">${counts[id]||0}</span></button>`).join("")}
-    <span class="gear-sortwrap">Ordenar
-      <select id="gearSort">
-        <option value="rarity" ${GEAR_UI.sort==='rarity'?'selected':''}>Raridade</option>
-        <option value="slot" ${GEAR_UI.sort==='slot'?'selected':''}>Tipo</option>
-        <option value="name" ${GEAR_UI.sort==='name'?'selected':''}>Nome</option>
-      </select>
-    </span>
-    <button class="gear-salvage-all" title="Recicla todas as peças Comuns e Incomuns (não-equipadas)">♻ Reciclar comuns+incomuns</button>
-  </div>`;
+  h += `<div class="gw-inv">
+    <div class="gear-filters inwrap">
+      ${[["all","Todos","🎒"], ...GEAR_SLOTS.map(gs=>[gs.id, gs.name, gs.icon])].map(([id,name,ico])=>
+        `<button class="gear-tab ${GEAR_UI.slot===id?'active':''}" data-gslot="${id}">${ico} ${name} <span class="gt-count">${counts[id]||0}</span></button>`).join("")}
+      <span class="gear-sortwrap">Ordenar
+        <select id="gearSort">
+          <option value="rarity" ${GEAR_UI.sort==='rarity'?'selected':''}>Raridade</option>
+          <option value="slot" ${GEAR_UI.sort==='slot'?'selected':''}>Tipo</option>
+          <option value="name" ${GEAR_UI.sort==='name'?'selected':''}>Nome</option>
+        </select>
+      </span>
+      <button class="gear-salvage-all" title="Recicla todas as peças Comuns e Incomuns (não-equipadas)">♻ Reciclar comuns+incomuns</button>
+    </div>`;
 
   let items = loot.filter(it => GEAR_UI.slot === "all" || it.slot === GEAR_UI.slot);
   const rarRank = r => Object.keys(RARITIES).indexOf(r);
@@ -1038,57 +1100,51 @@ function panelGear() {
   else if (GEAR_UI.sort === "slot") items = items.slice().sort((a,b)=> a.slot.localeCompare(b.slot) || rarRank(b.rarity)-rarRank(a.rarity));
   else items = items.slice().sort((a,b)=> a.name.localeCompare(b.name));
 
+  h += `<div class="gw-grid">`;
   if (!items.length) h += `<div class="gear-empty">Nada aqui ainda — Elites e Bosses dropam gear; dungeons também. 🌀</div>`;
-  h += `<div class="gear-grid">`;
   for (const it of items) {
     const rar = RARITIES[it.rarity];
     const chips = gearStatChips(it).map(c=>`<span class="gchip">${c}</span>`).join("");
-    const choosing = GEAR_UI.choosing === it.uid;
-    h += `<div class="gear-card" style="--rar:${rar.color}" data-uid="${it.uid}">
+    h += `<div class="gear-card" style="--rar:${rar.color}" data-qequip="${it.uid}" title="Clique p/ equipar em ${sel?RUNNER_BY_ID[sel].name:''}">
       <div class="gc-head">
         <span class="gc-ico">${slotIcon(it.slot)}</span>
         <div class="gc-title"><div class="gc-name" style="color:${rar.color}">${it.name}</div>
         <div class="gc-meta">${'★'.repeat(rar.stars)} ${rar.name} · ${slotName(it.slot)}</div></div>
+        <button class="gc-salv" data-salvage="${it.uid}" title="Reciclar por ${SALVAGE_VALUE[it.rarity]||10} 💎">♻</button>
       </div>
       <div class="gc-stats">${chips}</div>
-      ${it.proc ? `<div class="gc-proc">✦ PROC: ${GEAR_PROCS[it.proc] || it.proc}</div>` : ""}
-      <div class="gc-desc">${it.desc}</div>
-      <div class="gc-actions">
-        <button class="gc-btn equip" data-equip="${it.uid}">${choosing ? "✕ cancelar" : "⇪ EQUIPAR"}</button>
-        <button class="gc-btn salvage" data-salvage="${it.uid}" title="Reciclar por ${SALVAGE_VALUE[it.rarity]||10} 💎">♻ +${SALVAGE_VALUE[it.rarity]||10}</button>
-      </div>
-      ${choosing ? `<div class="gc-pick">equipar em: ${order.map(id=>{
-          const r2 = RUNNER_BY_ID[id];
-          return `<button class="gc-chip" data-equipto="${id}:${it.uid}" title="${r2.name}" style="background:linear-gradient(180deg,${lighten(r2.color,.2)},${r2.color})">${r2.name.slice(0,2)}</button>`;
-        }).join("")}</div>` : ""}
+      ${it.proc ? `<div class="gc-proc">✦ ${GEAR_PROCS[it.proc] || it.proc}</div>` : ""}
     </div>`;
   }
-  h += `</div>`;
+  h += `</div></div>`;   /* gw-grid + gw-inv */
+  h += `</div>`;         /* gearwrap */
   return h;
 }
 
 function bindGear() {
+  // selecionar runner
+  document.querySelectorAll("[data-gsel]").forEach(b=>b.addEventListener("click", ()=>{
+    GEAR_UI.runner = b.dataset.gsel; openPanel("gear");
+  }));
   // filtros
-  document.querySelectorAll("[data-gslot]").forEach(b=>b.addEventListener("click", ()=>{ GEAR_UI.slot = b.dataset.gslot; GEAR_UI.choosing = null; openPanel("gear"); }));
+  document.querySelectorAll("[data-gslot]").forEach(b=>b.addEventListener("click", ()=>{ GEAR_UI.slot = b.dataset.gslot; openPanel("gear"); }));
   const sort = $("gearSort");
   if (sort) sort.addEventListener("change", ()=>{ GEAR_UI.sort = sort.value; openPanel("gear"); });
-  // equipar: 1º clique escolhe a peça, 2º clique no chip do runner confirma
-  document.querySelectorAll("[data-equip]").forEach(b=>b.addEventListener("click", ()=>{
-    const uid = +b.dataset.equip;
-    GEAR_UI.choosing = (GEAR_UI.choosing === uid) ? null : uid;
-    openPanel("gear");
+  // slot vazio → filtra o inventário pelo tipo da peça
+  document.querySelectorAll("[data-gshow]").forEach(b=>b.addEventListener("click", ()=>{ GEAR_UI.slot = b.dataset.gshow; openPanel("gear"); }));
+  // equipar com 1 clique no card
+  document.querySelectorAll("[data-qequip]").forEach(c=>c.addEventListener("click", ()=>{
+    if (GEAR_UI.runner && equipItem(GEAR_UI.runner, +c.dataset.qequip)) { sfxLevel(); openPanel("gear"); buildBurstBars(); }
   }));
-  document.querySelectorAll("[data-equipto]").forEach(b=>b.addEventListener("click", ()=>{
-    const [id, uid] = b.dataset.equipto.split(":");
-    if (equipItem(id, +uid)) { GEAR_UI.choosing = null; sfxLevel(); openPanel("gear"); buildBurstBars(); }
-  }));
-  // desequipar (slots do loadout)
-  document.querySelectorAll("[data-unequip]").forEach(b=>b.addEventListener("click", ()=>{
+  // desequipar (slot preenchido no retrato)
+  document.querySelectorAll("[data-unequip]").forEach(b=>b.addEventListener("click", ev=>{
+    ev.stopPropagation();
     const [id, slot] = b.dataset.unequip.split(":");
     if (unequipItem(id, slot)) { sfxHit(); openPanel("gear"); }
   }));
-  // reciclar
-  document.querySelectorAll("[data-salvage]").forEach(b=>b.addEventListener("click", ()=>{
+  // reciclar (botão no canto do card — não dispara o equip)
+  document.querySelectorAll("[data-salvage]").forEach(b=>b.addEventListener("click", ev=>{
+    ev.stopPropagation();
     if (salvageItem(+b.dataset.salvage)) { sfxHit(); openPanel("gear"); }
   }));
   const salAll = document.querySelector(".gear-salvage-all");
