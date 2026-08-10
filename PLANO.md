@@ -50,6 +50,7 @@ Base gráfica em 2 motores (Canvas + WebGL/Pixi), sprites dos Runners no padrão
 - [x] **UI com cara de jogo** — tela de título/splash (libera o áudio no clique), wipe cinematográfico ao trocar de zona, overlay de pausa, cards de painel com entrada escalonada, botão ✕ estilizado, chanfros e brilho varrendo
 
 ### FASE 4 — Conteúdo & profundidade (pendente)
+- [x] **Gear PROCS reais** — os 11 efeitos de sabor viraram mecânicas: descarga em cadeia, pós-esquiva ×3, congelar em skill, +2% dano/ataque, Gravity Mark no básico, +10% Burst Sync, cura 15% no Burst, +10% ATQ aliado no Burst, +20% vs debuff, sobreviver c/ 1 HP (1×/combate), Burst +dano por HP; chip ✦PROC no card
 - [x] **Equipar gear de verdade + inventário organizado** — loadout por runner (⚔🛡💠🔮 com glow de raridade), stats reais via computeStats, uid por peça, cap 500 (sem apagar nada), reciclar opcional em massa p/ 💎, tudo persistido no save
 - [ ] Achievements / conquistas
 - [ ] Balanceamento fino (progressão, drop, dificuldade)

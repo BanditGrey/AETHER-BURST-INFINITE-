@@ -308,6 +308,10 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
 .gc-stats{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 6px}
 .gchip{font-family:'Orbitron';font-weight:700;font-size:10px;color:var(--aether);
   background:rgba(58,255,240,.07);border:1px solid rgba(58,255,240,.25);border-radius:6px;padding:2px 6px}
+.gc-proc{font-family:'Orbitron';font-weight:700;font-size:10px;color:var(--gold);letter-spacing:.4px;
+  background:rgba(255,210,63,.07);border:1px solid rgba(255,210,63,.3);border-radius:6px;
+  padding:3px 7px;margin-bottom:6px;width:fit-content}
+.gc-proc::after{content:''}
 .gc-desc{font-size:11px;color:var(--muted);line-height:1.45;min-height:30px}
 .gc-actions{display:flex;gap:6px;margin-top:8px}
 .gc-btn{font-family:'Orbitron';font-weight:700;font-size:10px;letter-spacing:.5px;border-radius:7px;

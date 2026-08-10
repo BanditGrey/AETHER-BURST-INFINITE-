@@ -407,6 +407,7 @@ function spawnWave() {
   }
   // progressão de zona se passou da 100
   G.waveActive = true;
+  for (const r of (G.runners || [])) r._coreUsed = false;   // novo combate: recarrega procs 1×/combate
   if (lvl === 1 || lvl % 10 === 0) {
     banner(ZONES[G.zone-1].name, "Nível " + lvl, ZONES[G.zone-1].accent);
   }
@@ -481,6 +482,11 @@ function dealDamage(source, target, raw, opts) {
   // esquiva
   if (!opts.noMiss && Math.random() < (target.eva || 0)) {
     FX.damage(target.x, target.y - (target.size||30) - 12, 0, { kind: "miss", text: "MISS" });
+    // Phantom Fang: próxima investida do runner que esquivou sai ×3
+    if (target.kind === "runner" && hasProc(target, "phantom_fang")) {
+      target._evadeProc = true;
+      FX.floatText(target.x, target.y - (target.size||30) - 30, "PHANTOM FANG!", { color: "#c9a8ff", size: 13, life: 0.9 });
+    }
     return 0;
   }
   // mitigação por def (com penetração)
@@ -503,6 +509,25 @@ function dealDamage(source, target, raw, opts) {
     if (source.phantomCrit) { dmg *= 1.5; source.phantomCrit = false; }
   }
   dmg = Math.max(1, dmg * (opts.mult || 1) * (0.9 + Math.random() * 0.2));
+
+  // ---- GEAR PROCS (multiplicadores de saída, só runners) ----
+  const kind0 = opts.kind || "basic";
+  if (source.kind === "runner") {
+    // Phantom Fang: consumido aqui (armado na esquiva)
+    if (source._evadeProc) { dmg *= 3; source._evadeProc = false; }
+    // Overcharge Cannon: +2% por ataque básico acumulado (cap 50 stacks = +100%)
+    if (kind0 === "basic" && hasProc(source, "overcharge_cannon")) {
+      source._oc = Math.min(50, (source._oc || 0) + 1);
+      dmg *= 1 + source._oc * 0.02;
+    }
+    // Rift Crystal: +20% contra alvos com debuff ativo
+    if (hasProc(source, "rift_crystal") &&
+        (target.gravityMark > 0 || target.frozen > 0 || target.slowPct > 0 || target.stunned > 0)) {
+      dmg *= 1.2;
+    }
+    // Echo Fragment: buff de 10% ATQ ganho quando um aliado usa Burst
+    if (source.echoBuff > 0) dmg *= 1.1;
+  }
 
   // escudo absorve primeiro (Solar Guard / Burst da Lyra etc.)
   let absorbed = 0;
@@ -537,6 +562,20 @@ function dealDamage(source, target, raw, opts) {
   // super-efetivo: anel de impacto colorido
   if (eff === "super") {
     FX.ring(target.x, target.y - (target.size||30)*0.5, { color: el.color, rMax: 46, life: 0.3, width: 3 });
+  }
+
+  // ---- GEAR PROCS (pós-dano, aplicados pela skill/básico dos runners) ----
+  if (source.kind === "runner" && target.kind === "enemy" && target.alive) {
+    // Glacial Staff: skills têm 30% de chance de congelar
+    if (kind0 === "skill" && hasProc(source, "glacial_staff") && Math.random() < 0.3) {
+      target.frozen = Math.max(target.frozen || 0, 1);
+      FX.ring(target.x, target.y - 20, { color: "#9be3ff", rMax: 60, life: 0.35, width: 3 });
+      FX.floatText(target.x, target.y - (target.size||30) - 28, "FROZEN ❄", { color: "#9be3ff", size: 13, life: 0.9 });
+    }
+    // Void Blade: o básico já aplica Gravity Mark
+    if (kind0 === "basic" && hasProc(source, "void_blade")) {
+      target.gravityMark = Math.max(target.gravityMark || 0, 4);
+    }
   }
 
   // charge de burst
@@ -578,6 +617,16 @@ function gainBurst(runner, amount) {
 
 function killUnit(unit, killer) {
   if (!unit.alive) return;
+  // Singularity Core (gear proc): uma vez por combate, sobrevive com 1 HP
+  if (unit.kind === "runner" && hasProc(unit, "singularity_core") && !unit._coreUsed) {
+    unit._coreUsed = true;
+    unit.hp = 1;
+    unit.hitFlash = 0.3;
+    FX.flashScreen("58,255,240", 0.35);
+    FX.ring(unit.x, unit.y - 24, { color: "#3afff0", rMax: 120, life: 0.5, width: 5 });
+    FX.floatText(unit.x, unit.y - 62, "SINGULARITY CORE!", { color: "#3afff0", size: 16, life: 1.2 });
+    return;
+  }
   unit.alive = false;
   if (unit.kind === "enemy") {
     G.stats.kills++;
@@ -660,6 +709,15 @@ function basicAttack(attacker, target) {
     }
   }
   dealDamage(attacker, target, attacker.atq * mult);
+  // Volt Edge (proc): 20% de descarga em cadeia após o básico
+  if (attacker.kind === "runner" && hasProc(attacker, "volt_edge") && Math.random() < 0.2) {
+    FX.ring(target.x, target.y - 20, { color: ELEMENTS.lightning.color, rMax: 90, life: 0.3, width: 3 });
+    FX.floatText(target.x, target.y - (target.size||30) - 28, "⚡ CADEIA!", { color: "#fff07a", size: 13, life: 0.8 });
+    for (const e of aliveEnemies()) {
+      if (e !== target && Math.abs(e.x - target.x) < 200)
+        dealDamage(attacker, e, attacker.atq * 0.45, { color: ELEMENTS.lightning.glow });
+    }
+  }
 }
 
 function useSkill(r) {
@@ -802,8 +860,19 @@ function fireBurst(r) {
   // dano massivo em todos os inimigos + tema visual
   const enemies = aoeTargets();
   burstVisual(r, el);
-  const dmgPer = r.atq * (6 + (r.level) * 0.05);
+  let dmgPer = r.atq * (6 + (r.level) * 0.05);
+  if (hasProc(r, "solar_greatsword")) dmgPer += r.hp * 0.15;   // Solar Greatsword (proc)
   setTimeout(()=>{}, 0);
+  // Infinity Loop: o portador recupera 15% do HP ao estourar
+  if (hasProc(r, "infinity_loop") && r.alive) {
+    const heal = Math.round(r.maxHp * 0.15);
+    r.hp = Math.min(r.maxHp, r.hp + heal);
+    FX.damage(r.x, r.y - 56, heal, { kind: "heal" });
+    FX.floatText(r.x, r.y - 78, "INFINITY LOOP", { color: "#5cd66c", size: 13, life: 1.0 });
+  }
+  // Echo Fragment: aliados que têm a relíquia ganham +10% ATQ por 5s
+  for (const al of G.runners) if (al !== r && al.alive && hasProc(al, "echo_fragment")) al.echoBuff = 5;
+
   // aplica dano escalonado para dar "chuva de números"
   enemies.forEach((e, i) => {
     const delay = i * 60 + 120;
@@ -883,7 +952,8 @@ function tryBurstSync() {
     // ambos prontos?
     if (ra.burstReady && rb.burstReady) {
       // chance base + nível de resonance
-      const chance = 0.02 + lvl * 0.03;
+      let chance = 0.02 + lvl * 0.03;
+      if (hasProc(ra, "resonance_amp") || hasProc(rb, "resonance_amp")) chance += 0.10;   // Resonance Amp (gear proc)
       if (Math.random() < chance) {
         fireBurstSync(pair, ra, rb);
         return;
@@ -1046,6 +1116,7 @@ function update(dt) {
     if (r.castGlow > 0) r.castGlow -= dt * 2;
     if (r.burstScale > 1) r.burstScale = Math.max(1, r.burstScale - dt * 2.5);
     if (r.swing > 0) r.swing -= dt * 4;
+    if (r.echoBuff > 0) r.echoBuff -= dt;    // Echo Fragment (gear proc)
     if (r.burstCd > 0) r.burstCd -= dt;
     if (r.shieldTimer > 0) { r.shieldTimer -= dt; if (r.shieldTimer <= 0) r.shieldHp = 0; }
     // passiva Fang Instinct (Zael) — atq dinâmico
@@ -1305,6 +1376,12 @@ function syncLiveGear() {
     computeStats(r);
     if (r.alive) r.hp = Math.min(r.maxHp, Math.max(1, Math.round(r.maxHp * hpRatio)));
   }
+}
+/* a unidade tem o proc de gear equipado? (unit.gear = array de itens) */
+function hasProc(u, procId) {
+  if (!u || !u.gear) return false;
+  for (const g of u.gear) if (g && g.proc === procId) return true;
+  return false;
 }
 
 /* ============================================================

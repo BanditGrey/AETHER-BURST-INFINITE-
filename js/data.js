@@ -190,19 +190,19 @@ const ZONES = [
 
 /* ---------- EQUIPAMENTOS (exemplos com personalidade) ---------- */
 const EQUIPMENT_POOL = [
-  { name:"Volt Edge",         slot:"weapon",   rarity:"epic",      desc:"Ataques têm 20% de chance de causar descarga em cadeia.", stats:{ atq: 0.10, crt: 0.05 } },
-  { name:"Phantom Fang",      slot:"weapon",   rarity:"epic",      desc:"Após esquiva, causa 300% de dano no próximo ataque.",     stats:{ atq: 0.09, eva: 0.10 } },
-  { name:"Solar Greatsword",  slot:"weapon",   rarity:"legendary", desc:"Burst causa dano adicional proporcional ao HP atual.",    stats:{ atq: 0.14, cdg: 0.15 } },
-  { name:"Glacial Staff",     slot:"weapon",   rarity:"epic",      desc:"Skills têm 30% de chance de congelar.",                   stats:{ atq: 0.10, pen: 8 } },
-  { name:"Overcharge Cannon", slot:"weapon",   rarity:"epic",      desc:"Cada ataque aumenta 2% o dano do próximo.",               stats:{ atq: 0.11, spd: 0.06 } },
-  { name:"Void Blade",        slot:"weapon",   rarity:"legendary", desc:"Aplica Gravity Mark automaticamente no básico.",          stats:{ atq: 0.13, crt: 0.08 } },
+  { name:"Volt Edge",         slot:"weapon",   rarity:"epic",      desc:"Ataques têm 20% de chance de causar descarga em cadeia.", proc:"volt_edge", stats:{ atq: 0.10, crt: 0.05 } },
+  { name:"Phantom Fang",      slot:"weapon",   rarity:"epic",      desc:"Após esquiva, causa 300% de dano no próximo ataque.",     proc:"phantom_fang", stats:{ atq: 0.09, eva: 0.10 } },
+  { name:"Solar Greatsword",  slot:"weapon",   rarity:"legendary", desc:"Burst causa dano adicional proporcional ao HP atual.",    proc:"solar_greatsword", stats:{ atq: 0.14, cdg: 0.15 } },
+  { name:"Glacial Staff",     slot:"weapon",   rarity:"epic",      desc:"Skills têm 30% de chance de congelar.",                   proc:"glacial_staff", stats:{ atq: 0.10, pen: 8 } },
+  { name:"Overcharge Cannon", slot:"weapon",   rarity:"epic",      desc:"Cada ataque aumenta 2% o dano do próximo.",               proc:"overcharge_cannon", stats:{ atq: 0.11, spd: 0.06 } },
+  { name:"Void Blade",        slot:"weapon",   rarity:"legendary", desc:"Aplica Gravity Mark automaticamente no básico.",          proc:"void_blade", stats:{ atq: 0.13, crt: 0.08 } },
   { name:"Burst Accelerator", slot:"core",     rarity:"epic",      desc:"Barra de Aether enche 25% mais rápido.",                  stats:{ ach: 0.25 } },
-  { name:"Resonance Amp",     slot:"core",     rarity:"rare",      desc:"+10% de chance de Burst Sync.",                           stats:{ crt: 0.04, spd: 0.04 } },
-  { name:"Infinity Loop",     slot:"core",     rarity:"legendary", desc:"Ao usar Burst, recupera 15% do HP.",                      stats:{ hp: 0.12, ach: 0.10 } },
+  { name:"Resonance Amp",     slot:"core",     rarity:"rare",      desc:"+10% de chance de Burst Sync.",                           proc:"resonance_amp", stats:{ crt: 0.04, spd: 0.04 } },
+  { name:"Infinity Loop",     slot:"core",     rarity:"legendary", desc:"Ao usar Burst, recupera 15% do HP.",                      proc:"infinity_loop", stats:{ hp: 0.12, ach: 0.10 } },
   { name:"Overload Chip",     slot:"core",     rarity:"epic",      desc:"Críticos aumentam o dano do próximo Burst.",              stats:{ crt: 0.10, cdg: 0.12 } },
-  { name:"Echo Fragment",     slot:"relic",    rarity:"legendary", desc:"Quando um aliado usa Burst, ganha 10% ATQ por 5s.",       stats:{ atq: 0.08, hp: 0.06 } },
-  { name:"Rift Crystal",      slot:"relic",    rarity:"epic",      desc:"Ataques em inimigos com debuff causam 20% mais dano.",    stats:{ atq: 0.09, pen: 6 } },
-  { name:"Singularity Core",  slot:"relic",    rarity:"legendary", desc:"Uma vez por combate, sobrevive com 1 HP.",                stats:{ hp: 0.14, def: 0.10 } },
+  { name:"Echo Fragment",     slot:"relic",    rarity:"legendary", desc:"Quando um aliado usa Burst, ganha 10% ATQ por 5s.",       proc:"echo_fragment", stats:{ atq: 0.08, hp: 0.06 } },
+  { name:"Rift Crystal",      slot:"relic",    rarity:"epic",      desc:"Ataques em inimigos com debuff causam 20% mais dano.",    proc:"rift_crystal", stats:{ atq: 0.09, pen: 6 } },
+  { name:"Singularity Core",  slot:"relic",    rarity:"legendary", desc:"Uma vez por combate, sobrevive com 1 HP.",                proc:"singularity_core", stats:{ hp: 0.14, def: 0.10 } },
 ];
 
 /* ---------- INFINITY CIRCUIT (árvore de bônus permanentes) ---------- */
@@ -267,4 +267,19 @@ const COMBAT_BANTER = {
   nina:   ["Comam isso!","Surto total!","Vai, vai, vai!"],
   rex:    ["...","Grrr.","RAAHH!"],
   sable:  ["............","Suma.","Adeus."],
+};
+
+/* ---------- GEAR PROCS (efeitos especiais REAIS) ---------- */
+const GEAR_PROCS = {
+  volt_edge:        "Descarga em cadeia",
+  phantom_fang:     "Pós-esquiva ×3",
+  solar_greatsword: "Burst + dano por HP",
+  glacial_staff:    "Skill congela (30%)",
+  overcharge_cannon:"+2% dano por ataque",
+  void_blade:       "Gravity Mark no básico",
+  resonance_amp:    "+10% Burst Sync",
+  infinity_loop:    "Burst cura 15% HP",
+  echo_fragment:    "Burst aliado: +10% ATQ",
+  rift_crystal:     "+20% vs alvo com debuff",
+  singularity_core: "Sobrevive com 1 HP (1×/combate)",
 };

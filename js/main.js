@@ -1051,6 +1051,7 @@ function panelGear() {
         <div class="gc-meta">${'★'.repeat(rar.stars)} ${rar.name} · ${slotName(it.slot)}</div></div>
       </div>
       <div class="gc-stats">${chips}</div>
+      ${it.proc ? `<div class="gc-proc">✦ PROC: ${GEAR_PROCS[it.proc] || it.proc}</div>` : ""}
       <div class="gc-desc">${it.desc}</div>
       <div class="gc-actions">
         <button class="gc-btn equip" data-equip="${it.uid}">${choosing ? "✕ cancelar" : "⇪ EQUIPAR"}</button>
