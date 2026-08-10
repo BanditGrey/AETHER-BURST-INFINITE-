@@ -67,6 +67,9 @@ FX.burst = function (x, y, opts) {
       glow: opts.glow !== false,
     });
   }
+  // limite de segurança: evita acúmulo de partículas fora de controle (uso de memória/CPU)
+  const MAX_PARTICLES = 600;
+  if (FX.particles.length > MAX_PARTICLES) FX.particles.splice(0, FX.particles.length - MAX_PARTICLES);
 };
 
 /* anel expansivo (para bursts / ondas) */
@@ -151,6 +154,8 @@ FX.update = function (dt) {
 
   // flash
   if (FX.flash.alpha > 0) FX.flash.alpha = Math.max(0, FX.flash.alpha - dt * 2.6);
+  // vignette decai sozinho (senão a tela ficava permanentemente escura após o primeiro burst)
+  if (FX.vignette > 0) FX.vignette = Math.max(0, FX.vignette - dt * 0.55);
 
   // particles
   for (let i = FX.particles.length - 1; i >= 0; i--) {

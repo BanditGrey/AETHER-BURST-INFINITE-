@@ -4,10 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>AETHER BURST: INFINITE</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" media="print" onload="this.media='all'">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin media="print" onload="this.media='all'">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="css/style.css?v=f407185" />
 </head>
 <body>
   <div id="app">
@@ -65,7 +66,8 @@
       <button class="nav-btn" data-view="dungeons"><span>🌀</span>Dungeons</button>
       <button class="nav-btn" data-view="codex"><span>📖</span>Codex</button>
       <button class="nav-btn" data-view="infinity"><span>💠</span>Infinity</button>
-      <button class="nav-btn" data-view="reboot"><span>♻️</span>Reboot</button>
+      <button class="nav-btn" data-view="ascension"><span>⭐</span>Ascensão</button>
+      <button class="nav-btn" data-view="progresso" title="Dashboard de progresso do projeto"><span>📊</span>Progresso</button>
     </nav>
 
     <!-- PAINÉIS -->
@@ -91,9 +93,10 @@
     <div id="toast"></div>
   </div>
 
-  <script src="js/data.js"></script>
-  <script src="js/fx.js"></script>
-  <script src="js/engine.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/data.js?v=f407185"></script>
+  <script src="js/fx.js?v=f407185"></script>
+  <script src="js/engine.js?v=f407185"></script>
+  <script src="js/pixi.js?v=f407185"></script>
+  <script src="js/main.js?v=f407185"></script>
 </body>
 </html>

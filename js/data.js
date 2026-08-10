@@ -168,13 +168,13 @@ const RESONANCE_LEVELS = [
 
 /* ---------- RIFT ENTITIES (inimigos) ---------- */
 const ENEMY_TYPES = {
-  hollow:  { name: "Hollow",  hp: 0.55, atq: 0.45, spd: 130, size: 26, color:"#8a93a6", behavior:"rush",   count:[3,5] },
-  brute:   { name: "Brute",   hp: 2.20, atq: 0.80, spd: 55,  size: 42, color:"#6b7280", behavior:"tank",   count:[1,2] },
-  phantom: { name: "Phantom", hp: 0.90, atq: 1.30, spd: 105, size: 30, color:"#9b6bff", behavior:"flank",  count:[2,3] },
-  surge:   { name: "Surge",   hp: 1.00, atq: 0.90, spd: 80,  size: 32, color:"#3afff0", behavior:"rush",   count:[2,3] },
-  elite:   { name: "Elite",   hp: 3.20, atq: 1.50, spd: 85,  size: 40, color:"#ff5a3c", behavior:"elite",  count:[1,1] },
-  miniboss:{ name: "Rift Warden", hp: 14, atq: 2.2, spd: 70, size: 64, color:"#ff8a3c", behavior:"boss",   count:[1,1] },
-  riftlord:{ name: "VERDANT RIFT LORD", hp: 90, atq: 3.6, spd: 60, size: 92, color:"#54c46a", behavior:"boss", count:[1,1] },
+  hollow:  { name: "Hollow",  hp: 0.55, atq: 0.45, spd: 130, size: 42, color:"#8a93a6", behavior:"rush",   count:[3,5] },
+  brute:   { name: "Brute",   hp: 2.20, atq: 0.80, spd: 55,  size: 67, color:"#6b7280", behavior:"tank",   count:[1,2] },
+  phantom: { name: "Phantom", hp: 0.90, atq: 1.30, spd: 105, size: 48, color:"#9b6bff", behavior:"flank",  count:[2,3] },
+  surge:   { name: "Surge",   hp: 1.00, atq: 0.90, spd: 80,  size: 51, color:"#3afff0", behavior:"rush",   count:[2,3] },
+  elite:   { name: "Elite",   hp: 3.20, atq: 1.50, spd: 85,  size: 64, color:"#ff5a3c", behavior:"elite",  count:[1,1] },
+  miniboss:{ name: "Rift Warden", hp: 14, atq: 2.2, spd: 70, size: 102, color:"#ff8a3c", behavior:"boss",   count:[1,1] },
+  riftlord:{ name: "VERDANT RIFT LORD", hp: 90, atq: 3.6, spd: 60, size: 147, color:"#54c46a", behavior:"boss", count:[1,1] },
 };
 
 /* ---------- ZONAS ---------- */
@@ -219,6 +219,41 @@ const INFINITY_NODES = [
   { id:"offline",x:.82, y:.56, branch:"recursos",  name:"Offline +",   cost:3, desc:"+15% eficiência offline",          effect:{ offline:0.15 } },
   { id:"ach1",   x:.34, y:.74, branch:"poder",     name:"Aether Charge",cost:4, desc:"+20% velocidade de Burst",         effect:{ ach:0.20 } },
   { id:"slot6",  x:.66, y:.74, branch:"recursos",  name:"6º Slot",     cost:8, desc:"Desbloqueia 6º Runner na formação",effect:{ slot6:true } },
+];
+
+/* ============================================================
+   ÁRVORE DE ASCENSÃO (passivas gastáveis)
+   Pontos de Ascensão são ganhos ao subir de nível da conta e ao
+   completar entradas do Codex. Cada nó tem custo, posição (x/y em %)
+   e pré-requisitos (nós que precisam estar desbloqueados antes).
+   ============================================================ */
+const ASCENSION_NODES = [
+  // ---- Tier 1 (raiz) ----
+  { id: "atq1",    name: "Força Bruta",     icon: "⚔️", x: .16, y: .20, tier: 1, cost: 1, prereq: [],                 effect: { atq: 0.05 }, desc: "+5% ATQ global" },
+  { id: "hp1",     name: "Escudo Aether",   icon: "❤️", x: .34, y: .20, tier: 1, cost: 1, prereq: [],                 effect: { hp: 0.05 },  desc: "+5% HP global" },
+  { id: "def1",    name: "Resiliência",     icon: "🛡️", x: .52, y: .20, tier: 1, cost: 1, prereq: [],                 effect: { def: 0.05 }, desc: "+5% DEF global" },
+  { id: "crt1",    name: "Olho Crítico",    icon: "🎯", x: .70, y: .20, tier: 1, cost: 1, prereq: [],                 effect: { crt: 5 },    desc: "+5% Chance de Crítico" },
+  { id: "shards1", name: "Caçador",         icon: "💎", x: .84, y: .20, tier: 1, cost: 1, prereq: [],                 effect: { shards: 0.10 }, desc: "+10% Aether Shards" },
+
+  // ---- Tier 2 ----
+  { id: "atq2",    name: "Fúria",           icon: "🔥", x: .12, y: .42, tier: 2, cost: 1, prereq: ["atq1"],           effect: { atq: 0.08 }, desc: "+8% ATQ global" },
+  { id: "hp2",     name: "Vitalidade",      icon: "💪", x: .28, y: .42, tier: 2, cost: 1, prereq: ["hp1"],            effect: { hp: 0.08 },  desc: "+8% HP global" },
+  { id: "ach1",    name: "Carga Rápida",    icon: "⚡", x: .40, y: .42, tier: 2, cost: 1, prereq: ["hp1"],            effect: { ach: 0.15 }, desc: "+15% velocidade de Burst" },
+  { id: "def2",    name: "Ferro",           icon: "⛓️", x: .52, y: .42, tier: 2, cost: 1, prereq: ["def1"],           effect: { def: 0.08 }, desc: "+8% DEF global" },
+  { id: "eva1",    name: "Sombra",          icon: "🌫️", x: .62, y: .42, tier: 2, cost: 1, prereq: ["crt1"],          effect: { eva: 5 },    desc: "+5% Evasão" },
+  { id: "cdg1",    name: "Massacre",        icon: "💥", x: .74, y: .42, tier: 2, cost: 1, prereq: ["crt1"],          effect: { cdg: 0.25 }, desc: "+25% Dano Crítico" },
+  { id: "shards2", name: "Avarícia",        icon: "💰", x: .88, y: .42, tier: 2, cost: 1, prereq: ["shards1"],       effect: { shards: 0.15 }, desc: "+15% Aether Shards" },
+
+  // ---- Tier 3 ----
+  { id: "pen1",    name: "Perfuração",      icon: "🔻", x: .16, y: .64, tier: 3, cost: 2, prereq: ["atq2"],          effect: { pen: 8 },    desc: "+8% Penetração" },
+  { id: "hp3",     name: "Colosso",         icon: "🏔️", x: .30, y: .64, tier: 3, cost: 2, prereq: ["hp2"],           effect: { hp: 0.12 },  desc: "+12% HP global" },
+  { id: "def3",    name: "Bastião",         icon: "🏯", x: .52, y: .64, tier: 3, cost: 2, prereq: ["def2"],          effect: { def: 0.12 }, desc: "+12% DEF global" },
+  { id: "drop1",   name: "Sorte",           icon: "🍀", x: .68, y: .64, tier: 3, cost: 2, prereq: ["cdg1"],          effect: { drop: 0.10 }, desc: "+10% Drop de equipamento" },
+  { id: "xp1",     name: "Mestre",          icon: "📚", x: .84, y: .64, tier: 3, cost: 2, prereq: ["shards2"],       effect: { xp: 0.20 },  desc: "+20% XP" },
+
+  // ---- Tier 4 (fim de ramo) ----
+  { id: "ach2",    name: "Sobrecarga Aether", icon: "✨", x: .30, y: .86, tier: 4, cost: 3, prereq: ["pen1", "hp3"], effect: { ach: 0.20, atq: 0.05 }, desc: "+20% Burst · +5% ATQ" },
+  { id: "offline1",name: "Guardião",        icon: "🌙", x: .84, y: .86, tier: 4, cost: 3, prereq: ["xp1"],           effect: { offline: 0.25 }, desc: "+25% eficiência offline" },
 ];
 
 /* Frases de combate para dar personalidade */

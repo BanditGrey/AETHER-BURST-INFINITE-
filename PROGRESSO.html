@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AETHER BURST — Dashboard de Progresso</title>
+<style>
+  :root{
+    --bg:#070912; --bg2:#0c1020; --panel:#11152a; --panel2:#161c38;
+    --line:#2a3358; --txt:#e7ecff; --muted:#8a93b8;
+    --aether:#3afff0; --gold:#ffd23f; --good:#5cd66c; --warn:#ff8a3c; --bad:#ff5a3c; --blue:#4cc9ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;padding:20px;line-height:1.5}
+  h1{font-size:26px;letter-spacing:1px;margin-bottom:4px}
+  .sub{color:var(--muted);margin-bottom:20px;font-size:14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px}
+  .card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card h2{font-size:15px;letter-spacing:1px;margin-bottom:12px;text-transform:uppercase;color:var(--aether)}
+  .card h2 .n{color:var(--muted);font-weight:400}
+  .metric{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px}
+  .metric .num{font-size:38px;font-weight:800;font-family:monospace}
+  .metric .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+
+  /* barra de progresso */
+  .bar{height:14px;background:#05070f;border:1px solid #1a2040;border-radius:7px;overflow:hidden;margin:8px 0 4px}
+  .bar>div{height:100%;background:linear-gradient(90deg,var(--aether),#1aa399);border-radius:7px;transition:width .4s}
+  .bar.warn>div{background:linear-gradient(90deg,var(--gold),#b8860b)}
+
+  /* donut (SVG) */
+  .donut-wrap{display:flex;align-items:center;gap:16px}
+  .donut{position:relative;width:130px;height:130px}
+  .donut .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .donut .center b{font-size:26px;font-family:monospace}
+  .donut .center span{font-size:10px;color:var(--muted)}
+
+  /* listas */
+  ul.tasks{list-style:none}
+  ul.tasks li{display:flex;gap:10px;align-items:flex-start;padding:7px 8px;border-radius:8px;cursor:pointer;transition:.15s}
+  ul.tasks li:hover{background:rgba(255,255,255,.04)}
+  ul.tasks li .chk{width:18px;height:18px;border:2px solid var(--line);border-radius:5px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:12px}
+  ul.tasks li.done .chk{background:var(--good);border-color:var(--good);color:#04211f}
+  ul.tasks li.done{opacity:.55}
+  ul.tasks li.done .name{text-decoration:line-through}
+  ul.tasks li .tag{font-size:10px;padding:2px 7px;border-radius:5px;flex-shrink:0;margin-left:auto;font-weight:700;text-transform:uppercase}
+  .tag.p{background:#1a3a2a;color:var(--good)}   /* pronto */
+  .tag.e{background:#3a2a12;color:var(--gold)}   /* em andamento */
+  .tag.x{background:#3a1218;color:var(--bad)}    /* pendente */
+  .tag.i{background:#12253a;color:var(--blue)}   /* ideia */
+  .li-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .li-head b{color:var(--gold)}
+
+  /* tabela assets */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:1px}
+  .status{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700}
+  .status.ok{background:#1a3a2a;color:var(--good)}
+  .status.no{background:#3a1218;color:var(--bad)}
+  .status.wip{background:#3a2a12;color:var(--gold)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:700px){.grid2{grid-template-columns:1fr}}
+  .tag-mini{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;background:#1a2040;margin:2px 4px 2px 0}
+  .footer{margin-top:20px;color:var(--muted);font-size:12px;text-align:center}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:10px}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .dot{width:12px;height:12px;border-radius:4px;display:inline-block}
+  .dot.p{background:var(--good)}.dot.e{background:var(--gold)}.dot.x{background:var(--bad)}.dot.i{background:var(--blue)}
+  .btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px}
+  .btn:hover{border-color:var(--aether)}
+  .btn-row{display:flex;gap:8px;margin-top:8px}
+  .counter{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+  <h1>⚡ AETHER BURST: INFINITE — Dashboard de Progresso</h1>
+  <div class="sub">Controle total do projeto (desenvolvimento solo) · atualizado automaticamente conforme você marca as tarefas · os checkmarks ficam salvos no navegador.</div>
+
+  <!-- MÉTRICAS + DONUT -->
+  <div class="grid">
+    <div class="card">
+      <h2>Progresso geral</h2>
+      <div class="donut-wrap">
+        <div class="donut">
+          <svg width="130" height="130" viewBox="0 0 130 130">
+            <circle cx="65" cy="65" r="52" fill="none" stroke="#1a2040" stroke-width="14"/>
+            <circle id="donutArc" cx="65" cy="65" r="52" fill="none" stroke="#3afff0" stroke-width="14"
+              stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" transform="rotate(-90 65 65)"/>
+          </svg>
+          <div class="center"><b id="overallPct">0%</b><span>concluído</span></div>
+        </div>
+        <div>
+          <div style="font-size:13px;margin-bottom:6px">Sistemas</div>
+          <div style="font-size:24px;font-weight:800"><span id="sysDone">0</span><span style="color:var(--muted);font-size:14px">/<span id="sysTotal">0</span></span></div>
+          <div style="font-size:13px;margin:10px 0 6px">Assets</div>
+          <div style="font-size:24px;font-weight:800"><span id="astDone">0</span><span style="color:var(--muted);font-size:14px">/<span id="astTotal">0</span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Fases / Roadmap</h2>
+      <div id="phaseBars"></div>
+    </div>
+
+    <div class="card">
+      <h2>O jogo agora</h2>
+      <ul style="list-style:none;font-size:13px">
+        <li style="padding:4px 0">📦 <b>Motor:</b> HTML5 Canvas 2D + WebGL (PixiJS, opt-in)</li>
+        <li style="padding:4px 0">🗂️ <b>Estrutura:</b> <code>index.html</code> · <code>css/</code> · <code>js/</code> (data, engine, fx, pixi, main) · <code>assets/</code></li>
+        <li style="padding:4px 0">💾 <b>Save:</b> localStorage (offline). Online ainda é plano → <code>PLAN_ONLINE.md</code></li>
+        <li style="padding:4px 0">🌐 <b>Status:</b> jogo web jogável, roda sem internet (Canvas)</li>
+      </ul>
+      <div class="btn-row">
+        <button class="btn" onclick="location='index.html'">▶ Abrir o jogo</button>
+        <button class="btn" onclick="location='PLANO.md'">📋 Plano mestre</button>
+        <button class="btn" onclick="location='PLAN_ONLINE.md'">📄 Ver plano online</button>
+        <button class="btn" onclick="resetChecks()">↺ Resetar checkmarks</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SISTEMAS + IDEIAS -->
+  <div class="grid2">
+    <div class="card">
+      <h2>Sistemas <span class="n" id="sysCountTxt"></span></h2>
+      <div class="legend">
+        <span><span class="dot p"></span>Pronto</span>
+        <span><span class="dot e"></span>Em andamento</span>
+        <span><span class="dot x"></span>Pendente</span>
+        <span><span class="dot i"></span>Ideia</span>
+      </div>
+      <ul class="tasks" id="sysList"></ul>
+    </div>
+
+    <div class="card">
+      <h2>Assets <span class="n" id="astCountTxt"></span></h2>
+      <div class="legend">
+        <span><span class="dot p"></span>Pronto</span>
+        <span><span class="dot e"></span>Em andamento</span>
+        <span><span class="dot x"></span>Faltante</span>
+      </div>
+      <table id="astTable"></table>
+    </div>
+  </div>
+
+  <!-- IDEIAS / BACKLOG -->
+  <div class="card" style="margin-top:16px">
+    <h2>Ideias &amp; Backlog <span class="n" id="ideaCountTxt"></span></h2>
+    <div class="li-head"><span>Ideias anotadas para o futuro (não bloqueiam a versão atual).</span><b id="ideaN"></b></div>
+    <ul class="tasks" id="ideaList"></ul>
+  </div>
+
+  <div class="footer">Dashboard de desenvolvimento · AETHER BURST: INFINITE · os checkmarks persistem neste navegador (localStorage).</div>
+
+<script>
+// ================= DADOS (edite aqui para manter o controle) =================
+// status: p = pronto | e = em andamento | x = pendente/parado | i = ideia
+const SYSTEMS = [
+  { n:'Núcleo de combate (ataque, alcance, melee avança, crit, esquiva, elementos, DEF/PEN)', s:'p' },
+  { n:'Formação de esquadrão (Vanguard 3 + Rear 2)', s:'p' },
+  { n:'Aether Burst (barras, cinemática, dano em área)', s:'p' },
+  { n:'Burst Sync + Resonance (pares, níveis)', s:'p' },
+  { n:'Progressão de marcha e zonas (nível 1–100, troca de zona)', s:'p' },
+  { n:'Economia: Aether Shards, Rift Tickets, Infinity Fragments', s:'p' },
+  { n:'Save/Load + relatório offline (localStorage)', s:'p' },
+  { n:'Infinity Circuit (compra de bônus com fragmentos)', s:'p' },
+  { n:'Árvore de Ascensão (passivas gastáveis com pontos)', s:'p' },
+  { n:'Codex (lore + progresso de abates por runner)', s:'p' },
+  { n:'Dungeons (4 modos com recompensas)', s:'p' },
+  { n:'Inventário de Gear (coleta/drop de equipamentos)', s:'e' }, // coletar/dropar sim; equipar de verdade não
+  { n:'Sons (WebAudio SFX) + mute', s:'p' },
+  { n:'Render WebGL via PixiJS (opt-in ?pixi=1, fallback Canvas)', s:'p' },
+  { n:'Sprites dos Runners integrados no render WebGL', s:'p' },
+  { n:'Equipar gear de verdade (slot weapon/core/relic, efeitos aplicados)', s:'x' },
+  { n:'Sprites de inimigos e bosses', s:'p' },
+  { n:'Arte de fundo por zona (7 zonas)', s:'p' },
+  { n:'UI estilizada com cara de jogo (menus, painéis, transições)', s:'e' },
+  { n:'Achievements / conquistas', s:'i' },
+  { n:'Sistema online: contas + save na nuvem (Node/Postgres)', s:'i' },
+  { n:'Leaderboard global', s:'i' },
+  { n:'Chat / clãs / amigos', s:'i' },
+  { n:'Boss mundial colaborativo', s:'i' },
+  { n:'Arena / PvP assíncrono', s:'i' },
+  { n:'Mestre de Elementos (bônus por 2+ runners do mesmo elemento)', s:'i' },
+  { n:'Set de Gear (bônus por conjunto)', s:'i' },
+  { n:'Missões diárias/semanais', s:'i' },
+  { n:'Eventos rotativos por zona', s:'i' },
+  { n:'Perfil público + desafios entre amigos', s:'i' },
+  { n:'Guilda com cofre e raid', s:'i' },
+  { n:'Importar/exportar save (backup)', s:'i' },
+  { n:'PWA (instalável no celular, offline)', s:'i' },
+  { n:'Animações de ataque com sprite', s:'i' },
+  { n:'Retratos/emoções dos Runners', s:'i' },
+];
+
+// assets: estado ok = pronto | wip = em andamento | no = faltante
+const ASSETS = [
+  { n:'Runner — KAIRO (raio) ✓ padrão Frost', c:'assets/runners/kairo.png', s:'ok' },
+  { n:'Runner — ZAEL (fogo) ✓ padrão Frost', c:'assets/runners/zael.png', s:'ok' },
+  { n:'Runner — SERAPH (trevas) ✓ padrão Frost', c:'assets/runners/seraph.png', s:'ok' },
+  { n:'Runner — LYRA (luz) ✓ padrão Frost', c:'assets/runners/lyra.png', s:'ok' },
+  { n:'Runner — FROST (gelo) ✓ REFERÊNCIA', c:'assets/runners/frost.png', s:'ok' },
+  { n:'Runner — NINA (raio) ✓ padrão Frost', c:'assets/runners/nina.png', s:'ok' },
+  { n:'Runner — REX (vento) ✓ padrão Frost', c:'assets/runners/rex.png', s:'ok' },
+  { n:'Runner — SABLE (trevas) ✓ padrão Frost', c:'assets/runners/sable.png', s:'ok' },
+  { n:'Inimigo — Hollow ✓', c:'assets/enemies/hollow.png', s:'ok' },
+  { n:'Inimigo — Brute ✓', c:'assets/enemies/brute.png', s:'ok' },
+  { n:'Inimigo — Phantom ✓', c:'assets/enemies/phantom.png', s:'ok' },
+  { n:'Inimigo — Surge ✓', c:'assets/enemies/surge.png', s:'ok' },
+  { n:'Inimigo — Elite ✓', c:'assets/enemies/elite.png', s:'ok' },
+  { n:'Miniboss — Rift Warden ✓', c:'assets/enemies/miniboss.png', s:'ok' },
+  { n:'Boss — Rift Lord ✓', c:'assets/enemies/riftlord.png', s:'ok' },
+  { n:'Fundo — 7 zonas ✓', c:'assets/bg/z1_verdant.jpg', s:'ok' },
+  { n:'Ícones de equipamentos / itens', s:'no' },
+  { n:'Sprites de armas por classe (opcional pós-integrado)', s:'i' },
+];
+
+// fases: [nome, [{sistema}, ...]] — usado no roadmap
+const PHASES = [
+  { name:'1 · Fundação (jogo jogável)', items:['Núcleo de combate','Formação','Aether Burst','Progression','Economia','Save/offline'] },
+  { name:'2 · Sistemas de progressão', items:['Infinity Circuit','Ascensão','Codex','Dungeons','Gear (inventário)'] },
+  { name:'3 · Polimento visual', items:['WebGL/PixiJS','Sprites Runners','Render de fundo','Sons','Sprites de inimigos','Arte de fundo por zona','UI estilizada'] },
+  { name:'4 · Conteúdo & profundidade', items:['Equipar de verdade','Achievements','Balanceamento fino'] },
+  { name:'5 · Online', items:['Contas','Save na nuvem','Leaderboard','Social','Eventos'] },
+];
+
+const KEY='aether_progress_v1';
+// ===========================================================================
+
+const $=id=>document.getElementById(id);
+let state={};
+try{ state=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ state={}; }
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} }
+function isDone(k){ return state[k]===true; }
+function toggle(k){ state[k]=!state[k]; save(); render(); }
+
+const TAG={p:['p','✔ Pronto'],e:['e','Em andamento'],x:['x','Pendente'],i:['i','Ideia']};
+
+function render(){
+  // ---- sistemas ----
+  const sys=SYSTEMS.filter(s=>s.s!=='i');
+  let sd=0;
+  $('sysList').innerHTML=sys.map(s=>{
+    const done=isDone('sys_'+s.n);
+    if(done)sd++;
+    const [cls,lbl]=TAG[s.s];
+    return `<li class="${done?'done':''}" onclick="toggle('sys_${s.n.replace(/[^a-zA-Z0-9_]/g,'')}')">
+      <span class="chk">${done?'✓':''}</span><span class="name">${s.n}</span><span class="tag ${cls}">${lbl}</span></li>`;
+  }).join('');
+  $('sysCountTxt').textContent=`· ${sd}/${sys.length} concluídos`;
+
+  // ---- assets ----
+  let ad=0;
+  $('astTable').innerHTML=`<tr><th>Asset</th><th>Estado</th></tr>`+ASSETS.map(a=>{
+    const ok=a.s==='ok';
+    const done=ok||isDone('ast_'+a.n);
+    if(ok)ad++;
+    const st= a.s==='ok'?['ok','Pronto'] : a.s==='wip'?['wip','Em andamento']:['no','Faltante'];
+    return `<tr style="${done&&!ok?'opacity:.6':''}">
+      <td style="cursor:pointer" onclick="toggle('ast_${a.n.replace(/[^a-zA-Z0-9_]/g,'')}')">${a.c?'🖼️ ':''}${a.n}</td>
+      <td><span class="status ${st[0]}">${st[1]}</span></td></tr>`;
+  }).join('');
+  const aTotal=ASSETS.filter(a=>a.s!=='i').length;
+  $('astCountTxt').textContent=`· ${ad}/${aTotal} prontos`;
+
+  // ---- ideias ----
+  const ideas=SYSTEMS.filter(s=>s.s==='i');
+  $('ideaList').innerHTML=ideas.map(s=>{
+    const done=isDone('sys_'+s.n);
+    return `<li class="${done?'done':''}" onclick="toggle('sys_${s.n.replace(/[^a-zA-Z0-9_]/g,'')}')">
+      <span class="chk">${done?'✓':''}</span><span class="name">${s.n}</span><span class="tag i">Ideia</span></li>`;
+  }).join('');
+  $('ideaN').textContent=`${ideas.length} ideias`;
+
+  // ---- fases / roadmap (barras) ----
+  $('phaseBars').innerHTML=PHASES.map(ph=>{
+    let c=0;
+    ph.items.forEach(it=>{
+      const m=SYSTEMS.find(s=>s.n.toLowerCase().startsWith(it.toLowerCase())||s.n.includes(it));
+      if(m && isDone('sys_'+m.n))c++;
+    });
+    const pct=Math.round(c/ph.items.length*100);
+    const color= pct===100?'var(--good)': pct>0?'var(--gold)':'var(--muted)';
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
+        <span>${ph.name}</span><span style="color:${color};font-weight:700">${pct}%</span></div>
+      <div class="bar"><div style="width:${pct}%;background:${color}"></div></div></div>`;
+  }).join('');
+
+  // ---- donut geral ----
+  const tot=sys.length + aTotal;
+  const dn=sd+ad;
+  $('sysDone').textContent=sd; $('sysTotal').textContent=sys.length;
+  $('astDone').textContent=ad; $('astTotal').textContent=aTotal;
+  const pct=tot?Math.round(dn/tot*100):0;
+  $('overallPct').textContent=pct+'%';
+  const arc=326.7*(1-pct/100);
+  $('donutArc').setAttribute('stroke-dashoffset',arc);
+}
+render();
+function resetChecks(){ if(confirm('Resetar todos os checkmarks deste navegador?')){ state={}; save(); render(); } }
+</script>
+</body>
+</html>
