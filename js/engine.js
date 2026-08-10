@@ -18,11 +18,11 @@ const GROUND_Y = 478;                 // linha do chão (topo da área de chão)
    A posição de cada slot é o PONTO DOS PÉS do personagem — a base do sprite
    fica ancorada nesse ponto, independentemente do tamanho do sprite. */
 const SQUAD_SLOTS = 6;
-const FORM_X0    = 190;                          // coluna 1 (retaguarda, mais à esquerda)
-const FORM_DX    = 150;                          // espaçamento horizontal constante entre colunas
+const FORM_X0    = 170;                          // coluna 1 (retaguarda, mais à esquerda)
+const FORM_DX    = 175;                          // espaçamento horizontal constante entre colunas
 const FORM_COL_X = [FORM_X0, FORM_X0 + FORM_DX];
-const FORM_Y0    = GROUND_Y - 78;                // primeira linha (mais ao fundo)
-const FORM_DY    = 70;                           // espaçamento vertical constante entre linhas
+const FORM_Y0    = GROUND_Y - 83;                // primeira linha (mais ao fundo)
+const FORM_DY    = 85;                           // espaçamento vertical constante entre linhas
 const FORM_ROW_Y = [FORM_Y0, FORM_Y0 + FORM_DY, FORM_Y0 + FORM_DY * 2];
 const FORM_FRONT_X = FORM_COL_X[FORM_COL_X.length - 1]; // coluna da frente (direita)
 /* posição do slot (1-based no HUD): leitura por linha — (1,2 / 3,4 / 5,6).
