@@ -18,11 +18,11 @@ const GROUND_Y = 478;                 // linha do chão (topo da área de chão)
    A posição de cada slot é o PONTO DOS PÉS do personagem — a base do sprite
    fica ancorada nesse ponto, independentemente do tamanho do sprite. */
 const SQUAD_SLOTS = 6;
-const FORM_X0    = 210;                          // coluna 1 (retaguarda, mais à esquerda)
-const FORM_DX    = 120;                          // espaçamento horizontal constante entre colunas
+const FORM_X0    = 190;                          // coluna 1 (retaguarda, mais à esquerda)
+const FORM_DX    = 150;                          // espaçamento horizontal constante entre colunas
 const FORM_COL_X = [FORM_X0, FORM_X0 + FORM_DX];
-const FORM_Y0    = GROUND_Y - 60;                // primeira linha (mais ao fundo)
-const FORM_DY    = 30;                           // espaçamento vertical constante entre linhas
+const FORM_Y0    = GROUND_Y - 78;                // primeira linha (mais ao fundo)
+const FORM_DY    = 70;                           // espaçamento vertical constante entre linhas
 const FORM_ROW_Y = [FORM_Y0, FORM_Y0 + FORM_DY, FORM_Y0 + FORM_DY * 2];
 const FORM_FRONT_X = FORM_COL_X[FORM_COL_X.length - 1]; // coluna da frente (direita)
 /* posição do slot (1-based no HUD): leitura por linha — (1,2 / 3,4 / 5,6).
@@ -37,6 +37,16 @@ function slotAdjacent(a, b) {
   const ra = Math.floor(a / 2), rb = Math.floor(b / 2);
   const ca = a % 2, cb = b % 2;
   return (ra === rb && ca !== cb) || (ca === cb && Math.abs(ra - rb) === 1);
+}
+/* escala de perspectiva por profundidade: quanto mais abaixo (perto da
+   câmera), maior o sprite. Abrange da 1ª à 3ª linha da grade; usada por
+   aliados e inimigos nos dois renderizadores (Canvas e Pixi). */
+const DEPTH_Y_MIN = FORM_ROW_Y[0];
+const DEPTH_Y_MAX = FORM_ROW_Y[FORM_ROW_Y.length - 1];
+const DEPTH_S_MIN = 0.90, DEPTH_S_MAX = 1.20;
+function depthScale(y) {
+  const t = Math.max(0, Math.min(1, (y - DEPTH_Y_MIN) / (DEPTH_Y_MAX - DEPTH_Y_MIN)));
+  return DEPTH_S_MIN + t * (DEPTH_S_MAX - DEPTH_S_MIN);
 }
 
 const ENGAGE_X   = 452;          // inimigos param um pouco à direita da formação
@@ -337,8 +347,8 @@ function makeEnemy(typeKey, level, isBossScale) {
     isRiftLord: typeKey === "riftlord",
     behavior: t.behavior,
     x: SPAWN_X + Math.random() * 200,
-    // inimigos usam faixa ampla de profundidade (não só a linha dos vanguard)
-    y: (GROUND_Y - 40) + (Math.random() * 40),
+    // inimigos usam faixa ampla de profundidade (cobre as 3 linhas da grade)
+    y: (GROUND_Y - 48) + (Math.random() * 62),
     targetX: ENGAGE_X + 20 + (Math.random() - 0.5) * 80,
     facing: -1,
     hp, maxHp: hp,

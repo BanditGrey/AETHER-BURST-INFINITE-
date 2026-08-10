@@ -612,7 +612,7 @@ window.PIXIR = (function () {
           const s = u.burstScale || 1;
           const bob = Math.sin(u.bob) * 2;
           // escala por profundidade: mais à frente (maior y) = maior sprite
-          const depth = Math.min(1.18, Math.max(0.88, 0.88 + (u.y - (GROUND_Y-44)) / 44 * 0.3));
+          const depth = depthScale(u.y);
           const hgt = 96 * depth * s;            // altura alvo em unidades de jogo
           const tw = spr.texture.width || 1, th = spr.texture.height || 1;
           spr.height = hgt;
@@ -627,7 +627,7 @@ window.PIXIR = (function () {
         const spr = drawEnemyUnit(unitG, u);
         if (spr) {
           const bob = Math.sin(u.bob) * 2;
-          const depth = Math.min(1.18, Math.max(0.88, 0.88 + (u.y - (GROUND_Y-44)) / 44 * 0.3));
+          const depth = depthScale(u.y);
           const hgt = u.size * 2.4 * depth;      // altura escala com tamanho × profundidade
           const tw = spr.texture.width || 1, th = spr.texture.height || 1;
           spr.height = hgt;

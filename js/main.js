@@ -326,7 +326,7 @@ function drawRunner(r) {
   const rimg = ensureRunnerImg(r);
   if (rimg) {
     // escala por profundidade: mais à frente (maior y) = maior sprite (perspectiva)
-    const depth = clamp(0.88 + (r.y - (GROUND_Y-44)) / 44 * 0.3, 0.88, 1.18);
+    const depth = depthScale(r.y);
     const hgt = 96 * depth * s;       // altura do sprite em unidades de jogo
     // âncora nos pés: a base do sprite fica exatamente sobre o ponto do slot,
     // preservando a proporção original — vale para qualquer tamanho de sprite
@@ -465,7 +465,7 @@ function drawEnemy(e) {
   // --- sprite de imagem (se carregou) substitui o corpo vetorial ---
   const eimg = ensureEnemyImg(e);
   if (eimg) {
-    const depth = clamp(0.88 + (e.y - (GROUND_Y-44)) / 44 * 0.3, 0.88, 1.18);
+    const depth = depthScale(e.y);
     const hgt = sz * 2.4 * depth;         // altura do sprite (tamanho × profundidade)
     // base do sprite ancorada no ponto dos pés, proporção original preservada
     const wid = hgt * ((eimg.width / eimg.height) || 1);
