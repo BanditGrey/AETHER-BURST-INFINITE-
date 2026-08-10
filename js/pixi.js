@@ -612,15 +612,20 @@ window.PIXIR = (function () {
         if (spr) {
           // posiciona o sprite ancorado pelos pés (anchor 0.5,1)
           const s = u.burstScale || 1;
-          const bob = Math.sin(u.bob) * 2;
           // escala por profundidade: mais à frente (maior y) = maior sprite
           const depth = depthScale(u.y);
-          const hgt = 96 * depth * s;            // altura alvo em unidades de jogo
+          // MOVIMENTO COM PÉS PLANTADOS: respiração (squash & stretch) em
+          // torno da âncora inferior — a base NUNCA sai do ponto do slot;
+          // no ataque, leve inclinação para frente em torno dos pés.
+          const breathe = Math.sin(u.bob) * 0.03;         // ±3% de altura
+          const hgt = 96 * depth * s;                     // altura alvo em unidades de jogo
           const tw = spr.texture.width || 1, th = spr.texture.height || 1;
-          spr.height = hgt;
-          spr.width = hgt * (tw / th);           // preserva a proporção do sprite
+          const wid0 = hgt * (tw / th);                   // preserva a proporção do sprite
+          spr.height = hgt * (1 + breathe);
+          spr.width = wid0 * (1 - breathe * 0.6);
           spr.x = u.x;
-          spr.y = u.y + bob;                     // base do sprite = ponto dos pés no slot
+          spr.y = u.y;                                    // pés SEMPRE no ponto do slot
+          spr.rotation = u.swing * 0.12;                  // inclinação de ataque
           spr.alpha = u.alive ? 1 : 0.35;
           spr.visible = true;
           if (!spriteLayer.children.includes(spr)) spriteLayer.addChild(spr);

@@ -85,7 +85,7 @@ Base gráfica em 2 motores (Canvas + WebGL/Pixi), sprites dos Runners no padrão
 - **Modo sombrio / tema por zona** no UI.
 
 ### Visual
-- **Animações de entrada** dos Runners (idle bob melhorado, ataque com sprite).
+- ~~**Animações de entrada** dos Runners~~ ✅ idle refeito: respiração squash & stretch com pés plantados (fim da flutuação) + inclinação de ataque.
 - **Efeito de burst por personagem** mais elaborado (partículas por elemento).
 - **Retratos/emoções** dos Runners em diálogo/codex.
 

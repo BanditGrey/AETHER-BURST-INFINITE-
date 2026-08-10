@@ -325,19 +325,20 @@ function drawRunner(r) {
     ctx.shadowBlur=0;
   }
 
-  ctx.translate(0, bob);
-
   // --- sprite de imagem (se carregou) substitui o corpo vetorial ---
   const rimg = ensureRunnerImg(r);
   if (rimg) {
-    // escala por profundidade: mais à frente (maior y) = maior sprite (perspectiva)
+    // MOVIMENTO COM PÉS PLANTADOS: nenhuma translação vertical — a base do
+    // sprite fica SEMPRE sobre o ponto do slot (zero flutuação). O idle é
+    // uma "respiração" (squash & stretch) em torno da base; no ataque,
+    // leve inclinação para frente em torno dos pés.
     const depth = depthScale(r.y);
-    const hgt = 96 * depth * s;       // altura do sprite em unidades de jogo
-    // âncora nos pés: a base do sprite fica exatamente sobre o ponto do slot,
-    // preservando a proporção original — vale para qualquer tamanho de sprite
-    const wid = hgt * ((rimg.width / rimg.height) || 1);
+    const breathe = Math.sin(r.bob) * 0.03;              // ±3% de altura
+    const sy = 1 + breathe, sx = 1 - breathe * 0.6;      // volume aprox. constante
+    const hgt = 96 * depth * s * sy;
+    const wid = 96 * depth * s * ((rimg.width / rimg.height) || 1) * sx;
+    ctx.rotate(r.swing * 0.12);                          // inclinação de ataque (pés fixos)
     ctx.drawImage(rimg, -wid/2, -hgt, wid, hgt);
-    ctx.rotate(0);
     // hit flash sobre o sprite
     if (r.hitFlash > 0) {
       ctx.globalAlpha = (r.hitFlash/0.18)*0.5;
@@ -354,6 +355,9 @@ function drawRunner(r) {
     if (!dying) drawUnitLabel(r, true);
     return;
   }
+
+  // (fallback vetorial) mantém a oscilação vertical antiga
+  ctx.translate(0, bob);
 
   // lean on swing
   const lean = r.swing * 0.3;
