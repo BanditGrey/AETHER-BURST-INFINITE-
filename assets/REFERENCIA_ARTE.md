@@ -194,10 +194,12 @@ Fundos de batalha (cenário wide 2:1, sem personagens) em `assets/bg/*.jpg`
 
 ## 💍 ÍCONES DE GEAR — arte por tipo de slot
 
-Ícones de item gerados em `assets/icons/slot_*.png` (192×192, fundo azul-marinho
-fechado `#0d1124` combinando com o tile — **sem chroma key**, uso direto
-`object-fit:contain` dentro do tile/slot). Estilo: MOBA item icon, pintura
-anime RPG, silhueta nítida, sem texto/borda.
+Ícones de item gerados em `assets/icons/slot_*.png` (192×192, **fundo transparente**
+— floodfill chroma key das 4 bordas, ver pipeline abaixo) flutuando dentro do
+tile/slot com `object-fit:contain` + drop-shadow da raridade. Estilo: MOBA item
+icon, pintura anime RPG, silhueta nítida, sem texto/borda.
+Slot vazio mostra a **silhueta escurecida** (CSS `grayscale(1) brightness(0)
+invert(.38)` + opacidade) — efeito "socket" vazio, sem arte extra.
 
 | Slot | Arquivo | Arte | Identidade de stats |
 |------|---------|------|---------------------|
@@ -213,7 +215,11 @@ anime RPG, silhueta nítida, sem texto/borda.
 > Prompt padrão de ícone: "Game inventory item icon, stylized anime RPG art:
 > <item>, centered, painted game art style like a MOBA item icon, solid very
 > dark navy blue background #0d1124, no text, no border, icon only, high
-> contrast, crisp silhouette". Pipeline: resize 192×192 -strip (sem key/despill).
-> Fallback automático p/ emoji via `onerror` do `<img>` (slots legados).
+> contrast, crisp silhouette". O gerador aplica uma vinheta radial (centro mais
+> claro), então o recorte usa **floodfill fuzz 25% a partir das 4 quinas** com a
+> cor do canto (só remove fundo conectado; não devora detalhe escuro da arte):
+> `-fuzz 25% -fill none -floodfill +0+0 BG -floodfill +(W-1)+0 BG -floodfill
+> +0+(H-1) BG -floodfill +(W-1)+(H-1) BG` → `-trim -bordercolor none -border 6`
+> → resize 192 `-strip`. Fallback automático p/ emoji via `onerror` do `<img>`.
 > ⚠️ Composições horizontais (brinco/pulseira) precisam pedir "vertical
 > composition filling the frame" senão a arte sai espremida.

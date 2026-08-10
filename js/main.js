@@ -976,10 +976,9 @@ const GEAR_SLOTS = [
   { id: "bracelet", name: "Pulseiras",  icon: "⛓️" },
 ];
 function slotIcon(s){ return (GEAR_SLOTS.find(g=>g.id===s)||{}).icon || "📦"; }
-/* arte do ícone do slot (assets/icons) — fallback pro emoji se faltar o arquivo */
+/* arte do ícone do slot (assets/icons, fundo transparente) — ghost = silhueta p/ slot vazio; fallback pro emoji se faltar o arquivo */
 function slotIconImg(s, cls, ghost){
-  return `<img class="${cls||'gi-img'}" src="assets/icons/slot_${s}.png?v=${SPRITE_V}" alt="" draggable="false"` +
-    (ghost ? ` style="opacity:.28;filter:grayscale(.9)"` : ``) +
+  return `<img class="${cls||'gi-img'}${ghost ? ' gi-ghost' : ''}" src="assets/icons/slot_${s}.png?v=${SPRITE_V}" alt="" draggable="false"` +
     ` onerror="this.outerHTML='<span class=&quot;gi-ico&quot;>${(slotIcon(s)||'📦')}</span>'"/>`;
 }
 function slotName(s){ return {weapon:'Burst Weapon',armor:'Rift Armor',core:'Aether Core',relic:'Infinity Relic',ring:'Anel',earring:'Brinco',necklace:'Colar',bracelet:'Pulseira'}[s]||s; }
@@ -1031,7 +1030,7 @@ function panelGear() {
 
   let h = `<h2>RIFT GEAR</h2>
     <div class="panel-sub">8 slots por Runner — arma, armadura, núcleo, relíquia e os 4 acessórios (anel · brinco · colar · pulseira).
-    Passe o mouse numa peça p/ ver os detalhes, clique p/ equipar. Slots brilhando = preenchidos (clique p/ desequipar).
+    Passe o mouse numa peça p/ ver os detalhes, clique p/ equipar. Slots brilhando = preenchidos (clique p/ desequipar). A bag rola com a roda ou arrastando.
     Inventário: <b>${loot.length}/${LOOT_CAP}</b> — reciclar é opcional e rende 💎.</div>`;
   h += `<div class="gearwrap">`;
 
@@ -1158,8 +1157,10 @@ function bindGear() {
   if (sort) sort.addEventListener("change", ()=>{ GEAR_UI.sort = sort.value; openPanel("gear"); });
   // slot vazio → filtra o inventário pelo tipo da peça
   document.querySelectorAll("[data-gshow]").forEach(b=>b.addEventListener("click", ()=>{ GEAR_UI.slot = b.dataset.gshow; openPanel("gear"); }));
-  // equipar com 1 clique no card
+  // equipar com 1 clique no card (ignora o clique que encerra um arraste de scroll)
   document.querySelectorAll("[data-qequip]").forEach(c=>c.addEventListener("click", ()=>{
+    const g = document.querySelector(".gi-grid");
+    if (g && g._dragMovedAt && Date.now() - g._dragMovedAt < 240) return;
     if (GEAR_UI.runner && equipItem(GEAR_UI.runner, +c.dataset.qequip)) { sfxLevel(); openPanel("gear"); buildBurstBars(); }
   }));
   // desequipar (slot preenchido no retrato)
@@ -1192,6 +1193,27 @@ function bindGear() {
       tip.classList.toggle("drop", (tr && gr) ? (tr.top - gr.top) < 180 : t.offsetTop < 76);
     });
   });
+  // bag: rola com a roda (nativo) E com arrastar o mouse
+  const dragGrid = document.querySelector(".gw-grid.gi-grid");
+  if (dragGrid) {
+    let dg = null;
+    dragGrid.addEventListener("pointerdown", e=>{
+      dg = { y: e.clientY, x: e.clientX, st: dragGrid.scrollTop, sl: dragGrid.scrollLeft, moved: false };
+      try { dragGrid.setPointerCapture(e.pointerId); } catch(_){}
+    });
+    dragGrid.addEventListener("pointermove", e=>{
+      if (!dg) return;
+      const dy = e.clientY - dg.y, dx = e.clientX - dg.x;
+      if (!dg.moved && Math.hypot(dx, dy) > 6) { dg.moved = true; dragGrid.classList.add("dragging"); }
+      if (dg.moved) { dragGrid.scrollTop = dg.st - dy; dragGrid.scrollLeft = dg.sl - dx; }
+    });
+    const dgEnd = ()=>{
+      if (dg && dg.moved) dragGrid._dragMovedAt = Date.now();
+      dragGrid.classList.remove("dragging"); dg = null;
+    };
+    dragGrid.addEventListener("pointerup", dgEnd);
+    dragGrid.addEventListener("pointercancel", dgEnd);
+  }
 }
 
 function panelDungeons() {

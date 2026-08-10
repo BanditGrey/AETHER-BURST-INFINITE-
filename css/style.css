@@ -293,6 +293,8 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
   background:rgba(5,7,15,.75);cursor:pointer;transition:.15s;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:2px;color:var(--txt);padding:0}
 .gws:hover{transform:scale(1.07)}
+.gws.empty{background:radial-gradient(65% 60% at 50% 42%,rgba(18,24,46,.85),rgba(5,7,15,.9));
+  box-shadow:inset 0 3px 12px rgba(0,0,0,.65)}
 .gws-ico{font-size:21px;line-height:1;filter:drop-shadow(0 0 6px var(--rar,transparent))}
 .gws i{font-style:normal;font-size:8px;letter-spacing:-1px;color:var(--rar)}
 .gws-lbl{font-family:'Orbitron';font-weight:700;font-size:7px;letter-spacing:.5px;color:var(--muted)}
@@ -325,7 +327,14 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
 .gw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;
   overflow-y:auto;max-height:56vh;padding:2px 2px 6px}
 .gw-grid.gi-grid{grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:9px;
-  overflow-y:auto;max-height:none;padding:2px 4px 8px 2px;align-content:start;flex:1;min-height:0}
+  overflow-y:auto;max-height:none;padding:2px 6px 8px 2px;align-content:start;flex:1;min-height:0;
+  cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;
+  scrollbar-width:thin;scrollbar-color:#2a3358 transparent}
+.gw-grid.gi-grid::-webkit-scrollbar{width:8px}
+.gw-grid.gi-grid::-webkit-scrollbar-thumb{background:#2a3358;border-radius:4px}
+.gw-grid.gi-grid::-webkit-scrollbar-thumb:hover{background:#3a4570}
+.gw-grid.gi-grid.dragging{cursor:grabbing}
+.gw-grid.gi-grid.dragging .gtip{display:none}
 /* ícone quadrado da peça */
 .gi{position:relative;aspect-ratio:1;border-radius:12px;cursor:pointer;
   background:linear-gradient(180deg,#10162e,#080b1a);border:1px solid color-mix(in srgb,var(--rar) 55%,#1c2440);
@@ -337,10 +346,12 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
 .gi::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;border-radius:12px 12px 0 0;
   background:linear-gradient(90deg,transparent,var(--rar),transparent);opacity:.85}
 .gi-ico{font-size:26px;filter:drop-shadow(0 0 8px var(--rar));pointer-events:none}
-.gi-img{width:86%;height:74%;object-fit:contain;pointer-events:none;margin-bottom:8px;
-  filter:drop-shadow(0 0 7px color-mix(in srgb,var(--rar) 65%,transparent));border-radius:8px}
-.gws-img{width:40px;height:38px;object-fit:contain;pointer-events:none;border-radius:7px;
-  filter:drop-shadow(0 0 6px var(--rar,transparent))}
+.gi-img{width:90%;height:80%;object-fit:contain;pointer-events:none;margin-bottom:6px;
+  filter:drop-shadow(0 0 8px color-mix(in srgb,var(--rar) 55%,transparent)) drop-shadow(0 3px 5px rgba(0,0,0,.5))}
+.gws-img{width:42px;height:40px;object-fit:contain;pointer-events:none;
+  filter:drop-shadow(0 0 6px var(--rar,transparent)) drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+/* slot vazio = silhueta escura da peça (estilo socket) */
+.gi-ghost{opacity:.32;filter:grayscale(1) brightness(0) invert(.38)}
 .gi-stars{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:7px;
   letter-spacing:-1px;pointer-events:none;text-shadow:0 1px 2px #000}
 .gi-proc{position:absolute;top:3px;right:5px;font-size:10px;color:var(--gold);
@@ -390,12 +401,12 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Rajdhan
 .gc-salv:hover{color:var(--gold);background:rgba(255,210,63,.12)}
 
 @media(max-width:1080px){
-  .panel.gear-wide{height:auto;max-height:88vh;overflow:auto}
-  .gearwrap{grid-template-columns:1fr}
+  .panel.gear-wide{height:min(720px,94vh);max-height:94vh;overflow:hidden}
+  .gearwrap{grid-template-columns:1fr;grid-template-rows:auto auto minmax(0,1fr);overflow:hidden}
   .gw-runners{flex-direction:row;overflow-x:auto;max-height:none;height:auto;padding-bottom:6px}
   .gw-runner{min-width:150px}
-  .gw-detail{height:auto}
-  .gw-grid.gi-grid{flex:none;max-height:46vh}
+  .gw-detail{height:auto;overflow-y:auto;scrollbar-width:none}
+  .gw-grid.gi-grid{min-height:110px}
 }
 @media(max-width:640px){
   .gw-portrait{width:138px;height:230px}
