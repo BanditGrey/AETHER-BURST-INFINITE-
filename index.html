@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AETHER BURST: INFINITE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- TOPO -->
+    <header id="topbar">
+      <div class="brand">
+        <div class="logo">⚡</div>
+        <div class="brand-text">
+          <div class="title">AETHER BURST<span>: INFINITE</span></div>
+          <div class="slogan">Burst Beyond Limits.</div>
+        </div>
+      </div>
+
+      <div class="zone-badge" id="zoneBadge">
+        <span class="zone-energy" id="zoneEnergy">🌿</span>
+        <div>
+          <div class="zone-name" id="zoneName">Verdant Rift</div>
+          <div class="zone-sub" id="zoneSub">Zona 1 · Nível 1</div>
+        </div>
+      </div>
+
+      <div class="resources">
+        <div class="res" title="Aether Shards"><span class="ico">💎</span><span id="rShards">0</span></div>
+        <div class="res" title="Rift Tickets"><span class="ico">⭐</span><span id="rTickets">0</span></div>
+        <div class="res" title="Infinity Fragments"><span class="ico">💠</span><span id="rFragments">0</span></div>
+      </div>
+
+      <div class="top-controls">
+        <div class="speed-toggle" id="speedToggle">
+          <button data-speed="1" class="active">1×</button>
+          <button data-speed="2">2×</button>
+          <button data-speed="3">3×</button>
+          <button data-speed="6" id="burstModeBtn">BURST</button>
+        </div>
+        <button class="icon-btn" id="muteBtn" title="Som">🔊</button>
+      </div>
+    </header>
+
+    <!-- CAMPO DE BATALHA -->
+    <main id="stage">
+      <canvas id="game"></canvas>
+      <div id="banner"></div>
+      <button id="compactToggle" title="Modo Companion">{{--}}</button>
+    </main>
+
+    <!-- BARRAS DE BURST + RESONANCE -->
+    <section id="burstbars"></section>
+
+    <!-- NAVEGAÇÃO -->
+    <nav id="navbar">
+      <button class="nav-btn active" data-view="march"><span>⚔️</span>Marcha</button>
+      <button class="nav-btn" data-view="squad"><span>🛡️</span>Esquadrão</button>
+      <button class="nav-btn" data-view="gear"><span>⚔️</span>Equipar</button>
+      <button class="nav-btn" data-view="dungeons"><span>🌀</span>Dungeons</button>
+      <button class="nav-btn" data-view="codex"><span>📖</span>Codex</button>
+      <button class="nav-btn" data-view="infinity"><span>💠</span>Infinity</button>
+      <button class="nav-btn" data-view="reboot"><span>♻️</span>Reboot</button>
+    </nav>
+
+    <!-- PAINÉIS -->
+    <div id="panel-overlay" class="hidden">
+      <div class="panel" id="panel">
+        <button class="panel-close" id="panelClose">✕</button>
+        <div id="panelContent"></div>
+      </div>
+    </div>
+
+    <!-- REPORT (offline / burst report) -->
+    <div id="modal-report" class="hidden">
+      <div class="report-box">
+        <h2>⚡ BURST REPORT</h2>
+        <p class="report-away" id="reportAway"></p>
+        <div class="report-stats" id="reportStats"></div>
+        <h3>RECOMPENSAS</h3>
+        <div class="report-rewards" id="reportRewards"></div>
+        <button class="big-btn" id="reportCollect">COLETAR TUDO</button>
+      </div>
+    </div>
+
+    <div id="toast"></div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/fx.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
