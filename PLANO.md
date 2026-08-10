@@ -46,6 +46,7 @@ Base gráfica em 2 motores (Canvas + WebGL/Pixi), sprites dos Runners no padrão
 - [x] **Arte de fundo por zona (7 zonas)** — v2 regenerada com plano de chão em perspectiva (anti-flutuação da grade 2×3)
 - [x] **Idle dos Runners com pés plantados** (squash & stretch + inclinação de ataque)
 - [x] **Sprites de skills (8 Runners + 7 mobs)** — 15 artes geradas/derivadas (chroma+despill), integradas via camada `FX.sprite()` no Canvas e no Pixi; ataques de mobs e pulso de morte do Surge também usam sprite
+- [x] **Números de dano por tipo + efeitos de impacto** — tipos basic/skill/burst/crit/miss/shield/heal, efetividade elemental (▲ super ×1.5 com anel de impacto / ▼ fraco ×0.66 em cinza), dano em runner vermelho; escudos passaram a absorver dano de verdade (bug: shieldHp era só decorativo)
 - [x] **UI com cara de jogo** — tela de título/splash (libera o áudio no clique), wipe cinematográfico ao trocar de zona, overlay de pausa, cards de painel com entrada escalonada, botão ✕ estilizado, chanfros e brilho varrendo
 
 ### FASE 4 — Conteúdo & profundidade (pendente)

@@ -588,16 +588,17 @@ window.PIXIR = (function () {
     while (textLayer.children.length) textLayer.removeChildAt(0, true);
     for (const d of FX.damageNumbers) {
       const a = Math.min(1, (d.life / d.maxLife) * 1.6);
-      const grow = d.crit ? (1.25 - 0.25 * a) : 1;
-      const t = new PIXI.Text(formatNumber(d.amount), {
+      const grow = d.crit ? (1.25 - 0.25 * a) : (d.kind === 'burst' ? (1.18 - 0.18 * a) : 1);
+      const tag = fxDamageTag(d);
+      const t = new PIXI.Text(fxDamageLabel(d), {
         fontFamily: 'Orbitron, sans-serif', fontSize: d.size * grow,
-        fontWeight: '900', fill: d.color, stroke: '#000', strokeThickness: 4, align: 'center',
+        fontWeight: '900', fill: d.crit ? '#ffd23f' : d.color, stroke: '#000', strokeThickness: 4, align: 'center',
       });
       t.anchor.set(0.5, 0.5); t.alpha = a;
       t.position.set(d.x, d.y);
       textLayer.addChild(t);
-      if (d.crit) {
-        const c = new PIXI.Text('CRIT!', { fontFamily: 'Orbitron', fontSize: 12 * grow, fontWeight: '900', fill: '#ffd23f', stroke: '#000', strokeThickness: 3, align: 'center' });
+      if (tag) {
+        const c = new PIXI.Text(tag.text, { fontFamily: 'Orbitron', fontSize: 12 * grow, fontWeight: '900', fill: tag.color, stroke: '#000', strokeThickness: 3, align: 'center' });
         c.anchor.set(0.5, 0.5); c.alpha = a; c.position.set(d.x, d.y - d.size * grow - 4);
         textLayer.addChild(c);
       }

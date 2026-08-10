@@ -480,15 +480,19 @@ function dealDamage(source, target, raw, opts) {
   if (!target || !target.alive) return 0;
   // esquiva
   if (!opts.noMiss && Math.random() < (target.eva || 0)) {
-    FX.floatText(target.x, target.y - target.size - 12, "MISS", { color: "#9aa3ad", size: 16 });
+    FX.damage(target.x, target.y - (target.size||30) - 12, 0, { kind: "miss", text: "MISS" });
     return 0;
   }
   // mitigação por def (com penetração)
   const effDef = Math.max(0, (target.def || 0) * (1 - (source.pen || 0)));
   let dmg = raw * (120 / (120 + effDef));
-  // elemento
+  // elemento (super-efetivo ×1.5 / fraco ×0.66)
+  let eff = "", elMult = 1;
   if (source.element && target.element) {
-    dmg *= elementMultiplier(source.element, target.element);
+    elMult = elementMultiplier(source.element, target.element);
+    dmg *= elMult;
+    if (elMult > 1.01) eff = "super";
+    else if (elMult < 0.99) eff = "weak";
   }
   // gravity mark (Seraph)
   if (target.gravityMark > 0) dmg *= 1.2;
@@ -500,20 +504,40 @@ function dealDamage(source, target, raw, opts) {
   }
   dmg = Math.max(1, dmg * (opts.mult || 1) * (0.9 + Math.random() * 0.2));
 
+  // escudo absorve primeiro (Solar Guard / Burst da Lyra etc.)
+  let absorbed = 0;
+  if (target.shieldHp > 0) {
+    absorbed = Math.min(target.shieldHp, dmg);
+    target.shieldHp -= absorbed; dmg -= absorbed;
+  }
   target.hp -= dmg;
   target.hitFlash = 0.18;
 
   const el = ELEMENTS[source.element] || ELEMENTS.aether;
+  const kind = opts.kind || "basic";
+  // cor do número: fraco = cinza; dano EM runner = vermelho; senão glow do elemento
+  let color = opts.color;
+  if (!color) color = eff === "weak" ? "#7d8899" : (target.kind === "runner" ? "#ff6b66" : el.glow);
   FX.damage(target.x, target.y - (target.size || 30) - 6, dmg, {
-    crit, color: crit ? "#ffd23f" : (opts.color || el.glow), element: source.element
+    crit, color, element: source.element, kind, eff
   });
+  // quanto o escudo absorveu (número ciano secundário 🛡)
+  if (absorbed > 0) {
+    FX.damage(target.x, target.y - (target.size || 30) + 14, absorbed,
+      { kind: "shield", text: "🛡 " + formatNumber(absorbed) });
+  }
   // SFX (throttled)
   if (crit) sfxCrit(); else if (Math.random() < 0.10) sfxHit();
-  // partículas de impacto
+  // partículas de impacto por tipo/efetividade
   FX.burst(target.x, target.y - (target.size||30)*0.4, {
-    count: crit ? 12 : 6, color: el.color, speed: crit ? 220 : 140,
+    count: crit ? 12 : (eff === "weak" ? 3 : (kind === "burst" ? 10 : (kind === "skill" ? 8 : 6))),
+    color: el.color, speed: crit ? 220 : 140,
     life: 0.35, size: crit ? 4 : 2.6, spread: Math.PI * 1.4, dir: Math.PI, glow: true
   });
+  // super-efetivo: anel de impacto colorido
+  if (eff === "super") {
+    FX.ring(target.x, target.y - (target.size||30)*0.5, { color: el.color, rMax: 46, life: 0.3, width: 3 });
+  }
 
   // charge de burst
   if (source.kind === "runner") gainBurst(source, 5 + dmg / (target.maxHp) * 40);
@@ -630,7 +654,7 @@ function basicAttack(attacker, target) {
       // descarga em todos próximos
       FX.ring(target.x, target.y - 20, { color: ELEMENTS.lightning.color, rMax: 150, life: 0.4, width: 4 });
       for (const e of aliveEnemies()) {
-        if (Math.abs(e.x - target.x) < 160) dealDamage(attacker, e, attacker.atq * 0.7, { color: ELEMENTS.lightning.glow });
+        if (Math.abs(e.x - target.x) < 160) dealDamage(attacker, e, attacker.atq * 0.7, { color: ELEMENTS.lightning.glow, kind: "skill" });
       }
       return;
     }
@@ -646,7 +670,7 @@ function useSkill(r) {
     case "kairo": { // Volt Fang — projétil de raio que cruza a linha inimiga
       FX.sprite("kairo_volt_fang", r.x + 36, r.y - 28, { vx: 1400, life: 0.6, size: 66 });
       FX.burst(r.x + 30, r.y - 26, { count: 10, color: el.color, speed: 200, life: 0.35, size: 3, spread: Math.PI * 0.8, dir: 0, glow: true });
-      for (const e of aoeTargets()) dealDamage(r, e, r.atq * 1.4, { color: el.glow });
+      for (const e of aoeTargets()) dealDamage(r, e, r.atq * 1.4, { color: el.glow, kind: "skill" });
       break;
     }
     case "zael": { // Crimson Slash Barrage — 5 cortes no alvo de maior HP
@@ -656,7 +680,7 @@ function useSkill(r) {
       for (let i=0;i<5;i++){
         setTimeout(()=>{
           if(tgt.alive){
-            dealDamage(r, tgt, r.atq*0.55, {color:el.glow});
+            dealDamage(r, tgt, r.atq*0.55, {color:el.glow, kind:"skill"});
             const a = -0.45 + Math.random()*0.9;              // ângulo do corte
             FX.sprite("zael_crimson_slash", tgt.x + 34, tgt.y - 22 + (Math.random()*24-12),
               { vx: -620 + Math.random()*140, vy: Math.sin(a)*260, rot: a, life: 0.24, size: 56 + Math.random()*16, flipX: true, fadeIn: 0.05, fadeOut: 0.4 });
@@ -671,7 +695,7 @@ function useSkill(r) {
       FX.ring(cx, cy, { color: el.color, rMax: 200, life: 0.6, width: 6, fill: true, fillAlpha: 0.3 });
       for (const e of aoeTargets()) {
         e.x += (cx - e.x) * 0.4; e.targetX = cx;
-        dealDamage(r, e, r.atq * 1.5, { color: el.glow });
+        dealDamage(r, e, r.atq * 1.5, { color: el.glow, kind: "skill" });
         e.gravityMark = 4;
       }
       break;
@@ -679,7 +703,7 @@ function useSkill(r) {
     case "lyra": { // Radiant Strike — lâmina de luz que atravessa todos
       FX.sprite("lyra_radiant_strike", r.x + 30, r.y - 24, { vx: 2300, life: 0.45, size: 42, fadeIn: 0.04, fadeOut: 0.35 });
       FX.beam(r.x, r.y - 24, r.x + 120, r.y - 24, { color: el.color, width: 6, life: 0.25 });
-      for (const e of aoeTargets()) dealDamage(r, e, r.atq * 1.3, { color: el.glow });
+      for (const e of aoeTargets()) dealDamage(r, e, r.atq * 1.3, { color: el.glow, kind: "skill" });
       break;
     }
     case "frost": { // Glacial Lance Burst — leque em 3 inimigos
@@ -690,7 +714,7 @@ function useSkill(r) {
         const dist = Math.hypot(dx, dy) || 1;
         const sp = 1250;
         FX.sprite("frost_glacial_lance", sx, sy, { vx: dx/dist*sp, vy: dy/dist*sp, rot: Math.atan2(dy, dx), life: Math.min(0.5, dist/sp + 0.12), size: 44, fadeIn: 0.05, fadeOut: 0.3 });
-        dealDamage(r, e, r.atq * 1.2, { color: el.glow });
+        dealDamage(r, e, r.atq * 1.2, { color: el.glow, kind: "skill" });
         applyFrost(e);
       }
       break;
@@ -698,14 +722,14 @@ function useSkill(r) {
     case "nina": { // Surge Cannon — raio que atravessa a linha
       FX.sprite("nina_surge_cannon", r.x + 32, r.y - 26, { vx: 1800, life: 0.55, size: 54, fadeIn: 0.05, fadeOut: 0.35 });
       FX.beam(r.x, r.y - 24, r.x + 110, r.y - 24, { color: el.color, width: 5, life: 0.22 });
-      for (const e of aoeTargets()) dealDamage(r, e, r.atq * 1.25, { color: el.glow });
+      for (const e of aoeTargets()) dealDamage(r, e, r.atq * 1.25, { color: el.glow, kind: "skill" });
       break;
     }
     case "rex": { // Savage Charge — empurra inimigos para trás
       FX.sprite("rex_savage_charge", r.x + 40, r.y - 16, { vx: 950, life: 0.6, size: 82, grow: 0.35, fadeIn: 0.05 });
       FX.ring(ENGAGE_X + 40, GROUND_Y - 50, { color: el.color, rMax: 180, life: 0.4, width: 5 });
       for (const e of aoeTargets()) {
-        if (e.x < ENGAGE_X + 200) { e.targetX += 60; e.x += 50; dealDamage(r, e, r.atq * 1.1, { color: el.glow }); }
+        if (e.x < ENGAGE_X + 200) { e.targetX += 60; e.x += 50; dealDamage(r, e, r.atq * 1.1, { color: el.glow, kind: "skill" }); }
       }
       break;
     }
@@ -715,7 +739,7 @@ function useSkill(r) {
       const tgt = enemies.reduce((a,b)=> a.atq>b.atq?a:b);
       FX.burst(r.x, r.y-24, {count:14,color:el.color,speed:140,life:0.4,size:3});
       r.x = tgt.x + 30; r._returnX = r.homeX;
-      dealDamage(r, tgt, r.atq * 3.2, { color: el.glow, forceCrit: r.phantomCrit });
+      dealDamage(r, tgt, r.atq * 3.2, { color: el.glow, kind: "skill", forceCrit: r.phantomCrit });
       FX.sprite("sable_shadow_execution", tgt.x + 40, tgt.y - 24, { vx: -540, life: 0.28, size: 66, flipX: true, rot: -0.3, fadeIn: 0.03, fadeOut: 0.35 });
       break;
     }
@@ -784,14 +808,14 @@ function fireBurst(r) {
   enemies.forEach((e, i) => {
     const delay = i * 60 + 120;
     setTimeout(() => {
-      if (e.alive) dealDamage(r, e, dmgPer * (0.85 + Math.random()*0.3), { color: el.glow, noMiss: true });
+      if (e.alive) dealDamage(r, e, dmgPer * (0.85 + Math.random()*0.3), { color: el.glow, kind: "burst", noMiss: true });
     }, delay);
   });
 
   // efeitos especiais por burst
   switch (r.id) {
     case "nina": // pulsos contínuos
-      for (let p=0;p<5;p++) setTimeout(()=>{ if(G) FX.ring(ENGAGE_X+60, GROUND_Y-70, {color:el.color,rMax:260,life:0.6,width:6}); for(const e of aoeTargets()) if(e.alive&&Math.random()<0.7) dealDamage(r,e,r.atq*0.8,{color:el.glow}); }, 300+p*350);
+      for (let p=0;p<5;p++) setTimeout(()=>{ if(G) FX.ring(ENGAGE_X+60, GROUND_Y-70, {color:el.color,rMax:260,life:0.6,width:6}); for(const e of aoeTargets()) if(e.alive&&Math.random()<0.7) dealDamage(r,e,r.atq*0.8,{color:el.glow,kind:"burst"}); }, 300+p*350);
       break;
     case "frost":
       for (const e of enemies) e.frozen = Math.max(e.frozen, 1.2);
@@ -914,7 +938,7 @@ function fireBurstSync(pair, ra, rb) {
   for(let i=0;i<60;i++) FX.burst(380+Math.random()*560, GROUND_Y-70, {count:1,color:i%2?pair.colorA:pair.colorB,speed:280,life:0.8,size:5});
 
   enemies.forEach((e,i)=>{
-    setTimeout(()=>{ if(e.alive){ dealDamage(ra, e, dmg*(0.85+Math.random()*0.3), {color:pair.colorB, noMiss:true}); } }, i*70 + 250);
+    setTimeout(()=>{ if(e.alive){ dealDamage(ra, e, dmg*(0.85+Math.random()*0.3), {color:pair.colorB, kind:"burst", noMiss:true}); } }, i*70 + 250);
   });
   // efeito especial do sync
   if (pair.name === "Circuit Freeze") for(const e of enemies){ e.frozen=1.5; applyFrost(e); }

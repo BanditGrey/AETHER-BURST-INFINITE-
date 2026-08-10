@@ -166,21 +166,44 @@ FX.floatText = function (x, y, text, opts) {
 FX.damage = function (x, y, amount, opts) {
   opts = opts || {};
   const crit = !!opts.crit;
+  const kind = opts.kind || "basic";           // basic | skill | burst | heal | miss | shield
+  const eff  = opts.eff  || "";                // "super" | "weak"
+  let size  = 18, color = opts.color || "#ffffff";
+  if      (kind === "skill")  size = 21;
+  else if (kind === "burst")  size = 26;
+  else if (kind === "miss")   { size = 15; if (!opts.color) color = "#9aa3ad"; }
+  else if (kind === "heal")   { size = 16; if (!opts.color) color = "#5cd66c"; }
+  else if (kind === "shield") { size = 14; if (!opts.color) color = "#4cc9ff"; }
+  if (eff === "weak" && !opts.color) color = "#7d8899";
+  if (crit) size = 30;
+  if (opts.size) size = opts.size;
+  const life = crit ? 0.95 : (kind === "burst" ? 0.85 : 0.7);
   FX.damageNumbers.push({
     x: x + (Math.random() - 0.5) * 18,
     y: y + (Math.random() - 0.5) * 10,
-    amount: amount,
-    life: crit ? 0.95 : 0.7,
-    maxLife: crit ? 0.95 : 0.7,
-    color: opts.color || (crit ? "#ffd23f" : "#ffffff"),
-    size: crit ? 30 : 18,
-    crit,
+    amount, text: opts.text || null,
+    life, maxLife: life,
+    color, size, crit, kind, eff,
     vy: -55 - Math.random() * 30,
     vx: (Math.random() - 0.5) * 40,
     element: opts.element,
   });
   if (crit) FX.shake(7, 0.18);
 };
+/* rótulo final do número de dano (usado no Canvas e no Pixi) */
+function fxDamageLabel(d) {
+  if (d.text) return d.text;
+  let s = (d.kind === "heal" ? "+" : "") + formatNumber(d.amount);
+  if (d.eff === "super") s += " ▲";
+  else if (d.eff === "weak") s += " ▼";
+  return s;
+}
+/* etiqueta de tipo exibida acima do número (Canvas e Pixi) */
+function fxDamageTag(d) {
+  if (d.crit)   return { text: "CRIT!",            color: "#ffd23f" };
+  if (d.kind === "burst") return { text: "BURST",  color: d.color };
+  return null;
+}
 
 /* ---------- Update ---------- */
 FX.update = function (dt) {
@@ -334,21 +357,23 @@ FX.render = function (ctx) {
   // damage numbers
   for (const d of FX.damageNumbers) {
     const a = Math.min(1, d.life / d.maxLife * 1.6);
-    const grow = d.crit ? (1.25 - 0.25 * a) : 1;
+    const grow = d.crit ? (1.25 - 0.25 * a) : (d.kind === "burst" ? (1.18 - 0.18 * a) : 1);
+    const tag = fxDamageTag(d);
     ctx.save();
     ctx.globalAlpha = a;
     ctx.font = `900 ${d.size * grow}px Orbitron, system-ui, sans-serif`;
     ctx.textAlign = "center";
     ctx.lineWidth = 4;
     ctx.strokeStyle = "rgba(0,0,0,0.85)";
-    ctx.strokeText(formatNumber(d.amount), d.x, d.y);
-    ctx.fillStyle = d.color;
-    if (d.crit) { ctx.shadowColor = d.color; ctx.shadowBlur = 14; }
-    ctx.fillText(formatNumber(d.amount), d.x, d.y);
-    if (d.crit) {
+    ctx.strokeText(fxDamageLabel(d), d.x, d.y);
+    ctx.fillStyle = d.crit ? "#ffd23f" : d.color;
+    if (d.crit || d.kind === "burst" || d.kind === "skill" || d.kind === "heal") { ctx.shadowColor = d.color; ctx.shadowBlur = d.crit ? 14 : 9; }
+    ctx.fillText(fxDamageLabel(d), d.x, d.y);
+    if (tag) {
+      ctx.shadowBlur = 8;
       ctx.font = `900 ${12 * grow}px Orbitron, sans-serif`;
-      ctx.fillStyle = "#ffd23f";
-      ctx.fillText("CRIT!", d.x, d.y - d.size * grow - 4);
+      ctx.fillStyle = tag.color;
+      ctx.fillText(tag.text, d.x, d.y - d.size * grow - 4);
     }
     ctx.restore();
   }
