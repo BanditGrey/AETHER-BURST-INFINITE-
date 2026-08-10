@@ -7,16 +7,16 @@
 /* ---------- Constantes de layout ---------- */
 const PLAY_W = 1280, PLAY_H = 640;
 const GROUND_Y = 478;                 // linha do chão (topo da área de chão)
-// formação em profundidade: cada slot tem posição própria (x, y) ancorada ao chão,
-// com variação de profundidade (mais à frente = mais baixo e mais à direita)
+// formação em bloco: vanguards numa fileira na frente (mesma linha de frente),
+// suportes (rear) logo atrás deles, formando um bloco compacto e organizado
 const VANGUARD_POS = [
-  { x: 300, y: GROUND_Y - 34 },   // vanguard topo (mais ao fundo)
-  { x: 345, y: GROUND_Y - 16 },
-  { x: 395, y: GROUND_Y },        // vanguard frente (mais à frente)
+  { x: 300, y: GROUND_Y - 8 },   // vanguard esquerda
+  { x: 360, y: GROUND_Y - 8 },   // vanguard centro
+  { x: 420, y: GROUND_Y - 8 },   // vanguard direita (mesma linha de frente)
 ];
 const REAR_POS = [
-  { x: 205, y: GROUND_Y - 22 },
-  { x: 245, y: GROUND_Y - 4 },
+  { x: 315, y: GROUND_Y - 40 },  // suporte esquerda (logo atrás)
+  { x: 405, y: GROUND_Y - 40 },  // suporte direita (logo atrás)
 ];
 const VANGUARD_X = 330, VANGUARD_Y = [GROUND_Y - 24, GROUND_Y - 12, GROUND_Y];
 const REAR_X     = 215, REAR_Y     = [GROUND_Y - 18, GROUND_Y];
