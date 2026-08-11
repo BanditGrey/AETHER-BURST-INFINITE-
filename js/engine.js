@@ -1323,7 +1323,14 @@ function nextUid() { G._uidSeq = (G._uidSeq || 0) + 1; return G._uidSeq; }
 function runnerGear(id) {
   const li = G.runnerLevels[id];
   if (!li) return {};
-  if (!li.gear || Array.isArray(li.gear)) li.gear = {};
+  // save legado (pré-acessórios) guardava gear como ARRAY de itens — migrar
+  // PRESERVANDO as peças: entram chaveadas pelo slot, nunca descartadas
+  if (Array.isArray(li.gear)) {
+    const map = {};
+    for (const it of li.gear) if (it && it.slot) map[it.slot] = it;
+    li.gear = map;
+  }
+  if (!li.gear) li.gear = {};
   return li.gear;
 }
 /* lista de itens equipados, na forma que computeStats consome (array) */
