@@ -333,20 +333,60 @@ alcançado** — luz sempre bate ×1,5 em trevas e trevas sempre ×1,5 em luz. A
 intenção óbvia era "rivalidade mútua", mas na prática **não existe defesa**:
 os dois se anulam e viram só dano dobrado dos dois lados.
 
-**Correção:** decidir o design — ou rivalidade real (ambos ×1,5, e aí remover o
-`weak` que é código morto e documentar), ou triângulo de verdade. Hoje o dado
-mente sobre o próprio comportamento, e o tooltip de elemento (S7) vai **exibir
-"▼ Fraco: Trevas" para uma fraqueza que não existe**.
+**✅ DECIDIDO (rivalidade mútua):** luz e trevas se ferem em cheio nos dois
+sentidos — **não existe defesa entre eles**, e isso passa a ser intencional e
+documentado, não acidente.
+
+```js
+// data.js — o weak deixa de ser código morto: sai, e entra `rival`
+light: { …, strong: ["dark"], weak: [], rival: "dark" },
+dark:  { …, strong: ["light"], weak: [], rival: "light" },
+```
+- `elementMultiplier()` **não muda** — já devolve ×1,5 nos dois sentidos.
+- O campo `rival` existe para o **tooltip (S7)** poder exibir
+  `⚔ Rival: Trevas — ×1,5 nos dois sentidos` em vez de mentir
+  `▼ Fraco: Trevas` para uma fraqueza que nunca roda.
+- **Leitura de design:** luz×trevas vira o duelo de alto risco do jogo — quem
+  ataca primeiro ganha. Combina com a *Bloodmoon Sanctum* (zona 17) e o
+  *Prism Nexus* (zona 18) do `PLANO_EXPANSAO.md`.
+
+> ✅ **Compatível com a suíte atual:** `test_dmg.js:32` já afirma
+> `luz ↔ trevas = ×1.5` nos dois sentidos. A decisão **confirma** o teste — a
+> correção é remover o dado morto e passar a exibir a verdade.
 
 ### B5 · 🟠 Aether é elemento sem identidade
 `aether` tem `strong:[]` e `weak:[]` — nunca é forte nem fraco contra nada. É o
 elemento da zona 7 (endgame) e do inimigo *Surge*. Resultado: a zona final é a
 **menos** interessante elementalmente.
 
-**Correção:** dar identidade — ex.: Aether ignora a carta elemental (sempre ×1,0,
-"neutro absoluto") **e** perfura 15% de DEF; ou é forte contra tudo e fraco contra
-tudo (×1,5 dando e recebendo, o "elemento de vidro"). Qualquer uma é melhor que
-"não faz nada".
+**✅ DECIDIDO (neutro absoluto + penetração):** Aether nunca ganha nem perde na
+carta elemental — em troca, **perfura armadura**. É o elemento que "não joga o
+jogo do triângulo": previsível contra qualquer alvo, e forte justamente contra
+quem se defende.
+
+```js
+aether: { …, strong: [], weak: [], neutral: true, penBonus: 0.15 },
+```
+
+**Onde entra no dano** (`engine.js:493` — o cálculo já existe, é só somar):
+```js
+const penTotal = (source.pen || 0) + (ELEMENTS[source.element]?.penBonus || 0);
+const effDef   = Math.max(0, (target.def || 0) * (1 - penTotal));
+```
+
+- **Não mexe em `elementMultiplier()`** — `strong:[]`/`weak:[]` já devolvem ×1,0.
+  A identidade vem da penetração, não da carta.
+- **Cap de segurança:** `penTotal` limitado a **0,90** — sem isso, aether + gear
+  de PEN + Ascensão pode zerar a DEF e quebrar a mitigação.
+- **Impacto medido:** hoje **nenhum runner é aether** — o efeito imediato é sobre
+  o mob *Surge* e a zona 7. Mas o `PLANO_EXPANSAO.md` prevê **3 runners aether**
+  (Orion, Ignis-9 e Astraea), então a regra nasce antes de quem vai usá-la.
+- **Sinergia:** casa com a *Nullstone Vault* (zona 15) e o boss final
+  *Aether Zenith* (zona 20) — o elemento do endgame ignora resistências.
+
+> ✅ **Compatível com a suíte atual:** `test_dmg.js:33` já afirma
+> `aether é neutro` (×1,0 nos dois sentidos). A decisão **preserva** isso e
+> adiciona a penetração, que precisa de **check novo** (regra do repo).
 
 ### B6 · 🟡 Zona 7 é o fim do mundo
 `nextLevel()` faz `G.zone = Math.min(ZONES.length, G.zone + 1)`. Ao terminar a

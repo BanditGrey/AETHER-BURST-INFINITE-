@@ -319,8 +319,8 @@ const ROADMAP = [
     items:[
       { id:'B1', t:'bug', n:'Dungeons infinitas — painel promete "3×/dia" mas NÃO há limite no código. Shard Vault paga 22.935 shards/clique no nvl 50; ~135 cliques = progressão inteira de um runner (3,1M)' },
       { id:'B2', t:'bug', n:'Rift Tickets = moeda fantasma: exibida na topbar e salva, mas NUNCA ganha nem gasta. Vira o custo de entrada das Dungeons (resolve B1 junto)' },
-      { id:'B4', t:'bug', n:'Luz/Trevas com fraqueza MORTA: ambos declaram o outro como strong E weak; strong é testado primeiro, weak nunca roda. Decidir: rivalidade mútua ou triângulo real' },
-      { id:'B5', t:'bug', n:'Aether sem identidade elemental (strong:[] weak:[]) — é o elemento da zona 7/endgame e não faz nada' },
+      { id:'B4', t:'bug', n:'✅DECIDIDO rivalidade mútua — luz/trevas ×1,5 nos DOIS sentidos, sem defesa entre eles. Remover o weak (código morto: strong é testado primeiro) e criar campo rival p/ o tooltip parar de mentir "▼ Fraco: Trevas"' },
+      { id:'B5', t:'bug', n:'✅DECIDIDO aether = neutro absoluto + 15% de PENETRAÇÃO (penBonus no effDef, cap total 0,90). Nunca ganha/perde na carta, mas fura armadura. Hoje nenhum runner é aether — os 3 (Orion, Ignis-9, Astraea) vêm na expansão' },
       { id:'D1', t:'bug', n:'Limpeza de código morto: recomputeRexAtx() (typo), setTimeout vazio no fireBurst, _dealDamageOrig nunca usado' },
     ]},
   { fase:'FASE A · ⚙️ Fundação de velocidade',
@@ -424,6 +424,14 @@ const ROADMAP = [
 
 // memória viva do projeto — REGRA: toda sessão de trabalho termina com entrada aqui
 const MEMORY = [
+  { d:'10/08/2026 (decisões)', t:'⚖️ B4 e B5 decididos — a FASE 0 está destravada', items:[
+    '⚔️ B4 = RIVALIDADE MÚTUA: luz e trevas se ferem ×1,5 nos dois sentidos, sem defesa entre eles — agora é intencional e documentado, não acidente. O weak (código morto: strong é testado primeiro) sai e entra o campo <code>rival</code>, para o tooltip parar de mentir "▼ Fraco: Trevas"',
+    '💠 B5 = AETHER NEUTRO + PENETRAÇÃO: nunca ganha nem perde na carta elemental, mas fura 15% de armadura (<code>penBonus</code> somado ao effDef). É o elemento que não joga o jogo do triângulo — forte justamente contra quem se defende',
+    '🛡️ Cap de segurança definido: penTotal limitado a 0,90 — sem isso, aether + gear de PEN + Ascensão zeraria a DEF e quebraria a mitigação',
+    '🔍 Achado ao especificar: HOJE NENHUM RUNNER É AETHER (só o mob Surge e a zona 7). Os 3 aether (Orion, Ignis-9, Astraea) vêm na expansão — a regra nasce antes de quem vai usá-la',
+    '✅ As duas decisões CONFIRMAM a suíte atual (test_dmg:32-33 já afirma luz↔trevas ×1,5 e aether neutro). A penetração é comportamento novo ⇒ ganha check novo (regra do repo)',
+    '📋 COMECE_AQUI.md agora traz a Fase 0 item a item, com arquivo/linha e o check novo de cada um — pronta para executar sem redecidir nada',
+  ]},
   { d:'10/08/2026 (fim de sessão)', t:'🚀 Tudo pronto p/ retomar com UM comando: <code>npm start</code>', items:[
     '🎯 <code>npm start</code> imprime o painel de comando: estado, PRÓXIMA fase desbloqueada, itens exatos, decisões pendentes e comandos — lê o ROADMAP direto do PROGRESSO.html (fonte única, nunca desatualiza)',
     '🧪 <code>npm test</code> entregue (item A1 da Fase A): 6 suítes em PARALELO num comando, resumo colorido, exit≠0 se cair. Validado com falha proposital — detecta e bloqueia',

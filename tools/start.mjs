@@ -51,17 +51,25 @@ proxima.items.forEach((it, i) => {
 console.log('');
 
 /* ---- as decisões que travam o começo ---- */
-console.log(`${C.b}${C.y}⚖  DECISÕES PENDENTES${C.x} ${C.d}(travam parte da Fase 0 — responda antes de codar)${C.x}`);
+console.log(`${C.b}${C.y}⚖  DECISÕES${C.x}`);
 console.log(line());
+const decididas = [
+  ['B4', 'Luz vs Trevas', 'rivalidade mútua — ×1,5 nos dois sentidos, sem defesa'],
+  ['B5', 'Aether',        'neutro absoluto + 15% de penetração (cap total 0,90)'],
+];
+for (const [id, tema, r] of decididas)
+  console.log(`   ${C.g}✅ ${id.padEnd(4)}${C.x} ${C.b}${tema}${C.x} ${C.d}— ${r}${C.x}`);
+
 const decisoes = [
-  ['B4', 'Luz vs Trevas', 'rivalidade mútua (ambos ×1,5, weak vira código morto) OU triângulo real?'],
-  ['B5', 'Aether',        'neutro absoluto + penetração OU "elemento de vidro" (×1,5 dando e recebendo)?'],
   ['X-1','Recrutamento',  'começar com 4 runners e conquistar 16 OU manter todos liberados?'],
   ['X-4','Tamanho da zona','zonas 8–20 com 100 níveis (=2.000 no total) OU mais curtas?'],
   ['X-5','Ordem da expansão','zonas primeiro (sugerido) OU runners primeiro?'],
 ];
 for (const [id, tema, q] of decisoes)
-  console.log(`   ${C.m}${id.padEnd(4)}${C.x} ${C.b}${tema}${C.x} ${C.d}— ${q}${C.x}`);
+  console.log(`   ${C.m}⏳ ${id.padEnd(4)}${C.x} ${C.b}${tema}${C.x} ${C.d}— ${q}${C.x}`);
+console.log(`   ${C.d}(as 3 restantes travam a expansão X0+, não a Fase 0)${C.x}`);
+console.log('');
+console.log(`${C.g}${C.b}   ➜ A FASE 0 ESTÁ DESTRAVADA — pode executar inteira.${C.x}`);
 console.log('');
 
 /* ---- roadmap completo, resumido ---- */

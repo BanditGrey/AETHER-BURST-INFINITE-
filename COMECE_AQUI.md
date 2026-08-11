@@ -68,17 +68,24 @@ vira `wind`**. Criar 13 mapas antes de corrigir isso espalha o bug por todos ele
 
 ---
 
-## ⚖️ 5 decisões pendentes (responda antes de codar)
+## ✅ Decisões TOMADAS (a Fase 0 está destravada)
+
+| # | Tema | Decisão |
+|---|---|---|
+| **B4** | Luz vs Trevas | **Rivalidade mútua** — ×1,5 nos dois sentidos, sem defesa entre eles. O `weak` (código morto) sai; entra o campo `rival` para o tooltip parar de mentir *"▼ Fraco: Trevas"*. |
+| **B5** | Aether | **Neutro absoluto + 15% de penetração.** Nunca ganha nem perde na carta; em troca, fura armadura. Cap de `penTotal` em **0,90** para não zerar a mitigação. |
+
+> As duas **confirmam** a suíte atual (`test_dmg.js:32-33` já afirma
+> `luz↔trevas ×1,5` e `aether neutro`). A penetração do aether é
+> comportamento novo ⇒ **precisa de check novo** (regra do repo).
+
+## ⏳ 3 decisões ainda pendentes (travam a expansão, não a Fase 0)
 
 | # | Tema | Pergunta |
 |---|---|---|
-| **B4** | Luz vs Trevas | rivalidade mútua (ambos ×1,5, e o `weak` sai como código morto) **ou** triângulo real? |
-| **B5** | Aether | neutro absoluto + penetração **ou** "elemento de vidro" (×1,5 dando e recebendo)? |
 | **X-1** | Recrutamento | começar com **4** runners e conquistar 16 **ou** manter todos liberados? |
 | **X-4** | Tamanho da zona | zonas 8–20 com 100 níveis (**2.000** no total) **ou** mais curtas? |
 | **X-5** | Ordem | zonas primeiro (**sugerido** — dão contexto e local de recrutamento) **ou** runners primeiro? |
-
-**B4 e B5 travam a Fase 0.** As outras três travam a expansão (X0+).
 
 ---
 
@@ -102,7 +109,39 @@ vira `wind`**. Criar 13 mapas antes de corrigir isso espalha o bug por todos ele
 
 ---
 
-## 💡 Se amanhã só der para fazer uma coisa
+## 🎯 A FASE 0, item a item (pronta para executar)
 
-Responda as **decisões B4 e B5** e mande fazer a **Fase 0**. É a única que
-desbloqueia todas as outras, e cabe numa sessão.
+Com B4/B5 decididos, a Fase 0 está **totalmente especificada**. Ordem sugerida:
+
+### B4 · Rivalidade mútua *(o mais rápido)*
+- `data.js`: `light`/`dark` → `weak: []` + `rival: "dark"` / `rival: "light"`
+- `main.js` (linha ~1067): a linha `▼ Fraco:` passa a exibir `⚔ Rival: … (×1,5 nos dois sentidos)`
+- ✅ check novo: *"luz/trevas não têm weak declarado (rivalidade é via `rival`)"*
+
+### B5 · Aether neutro + penetração
+- `data.js`: `aether` → `neutral: true, penBonus: 0.15`
+- `engine.js` (~493): somar `penBonus` ao `pen` da fonte, com `Math.min(0.90, …)`
+- ✅ checks novos: *"aether perfura 15% a mais"* · *"penTotal nunca passa de 0,90"*
+
+### B2 · Rift Tickets viram moeda de verdade
+- Ganho: **+3/dia** no login + **1 por boss** derrotado
+- Gasto: **1 por run de dungeon**
+- Persistir o carimbo do dia no save (com migração de save antigo)
+- ✅ check novo: *"ticket é debitado ao rodar dungeon e bloqueia em 0"*
+
+### B1 · Limite diário nas Dungeons *(o buraco de 22.935 shards/clique)*
+- `G.dungeonUses = { <id>: n }` + reset por `new Date().toDateString()`
+- Respeitar o `freq` que **já está escrito na UI** (3×/dia e 2×/dia)
+- Botão desabilitado com contador *"2/3 restantes hoje"*
+- ✅ check novo: *"4º clique no Shard Vault é recusado no mesmo dia"*
+
+### D1 · Limpeza
+- `engine.js:597` `recomputeRexAtx()` (typo, nunca chamado)
+- `engine.js:865` `setTimeout(()=>{}, 0)` vazio
+- `main.js:1501` `_dealDamageOrig` nunca usado
+
+### Fechamento da fase
+```bash
+npm test            # tem que estar verde
+```
+\+ entrada nova no `MEMORY` do `PROGRESSO.html` + checkboxes marcados.
