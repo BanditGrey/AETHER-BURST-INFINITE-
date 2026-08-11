@@ -1,0 +1,23 @@
+{
+  "name": "aether-burst-infinite",
+  "version": "1.0.0",
+  "description": "Idle RPG com sistema de Burst e Resonance — HTML + Canvas + JS puro, sem frameworks.",
+  "private": true,
+  "scripts": {
+    "start": "node tools/start.mjs",
+    "test": "node tools/run-all.mjs",
+    "test:gear": "node tests/test_gear.js",
+    "test:dmg": "node tests/test_dmg.js",
+    "test:procs": "node tests/test_procs.js",
+    "test:skills": "node tests/test_skills2.js",
+    "test:ui": "node tests/test_ui.js",
+    "test:smoke": "node tests/smoke_ui.js",
+    "test:browser": "bash tools/browser-test.sh",
+    "dev": "python3 -m http.server 8000 --bind 0.0.0.0",
+    "dash": "node -e \"console.log('Abra: PROGRESSO.html (ou http://localhost:8000/PROGRESSO.html com npm run dev)')\"",
+    "plano": "node -e \"console.log('\\n📋 DOCUMENTOS DE PLANEJAMENTO\\n  PLANO_SKILLS.md    — fases 0-E: economia furada, skills de IA, sistemas de profundidade\\n  PLANO_EXPANSAO.md  — fases X0-X6: 20 mapas, 20 runners, bestiário regional, Codex vivo, Coleções\\n  PLANO.md           — roadmap original do projeto\\n  PLAN_ONLINE.md     — fase 5: contas, save na nuvem, leaderboard\\n  PROGRESSO.html     — dashboard vivo (checkboxes persistentes)\\n')\""
+  },
+  "comentario": "SEM dependências de propósito — o jogo roda por file:// e não tem build. As suítes usam jsdom instalado em ~/.uitest (ver tests/setup_browser.sh).",
+  "dependencies": {},
+  "engines": { "node": ">=18" }
+}

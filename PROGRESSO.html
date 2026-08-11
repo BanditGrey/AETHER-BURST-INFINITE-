@@ -162,6 +162,22 @@
   </div>
 
   <!-- MEMÓRIA / CHANGELOG -->
+  <!-- ROADMAP EXECUTÁVEL POR FASES -->
+  <div class="card" style="margin-top:16px">
+    <h2>🗺️ Roadmap por fases <span class="n">— o que falta, na ordem de execução (fonte: PLANO_SKILLS.md)</span></h2>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--bad)"></span> Bug/quebrado</span>
+      <span><span class="dot" style="background:var(--gold)"></span> Sistema novo</span>
+      <span><span class="dot" style="background:var(--blue)"></span> Ferramenta/skill</span>
+      <span style="margin-left:auto">⛔ = bloqueia as fases seguintes</span>
+    </div>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:10px">
+      <b style="color:var(--bad)">Regra de ouro:</b> não pular fase. Cada fase fecha com <code>npm test</code> verde
+      + entrada na Memória. Fazer tudo de uma vez = quebrar tudo no fim.
+    </div>
+    <div id="roadmapList"></div>
+  </div>
+
   <div class="card" style="margin-top:16px">
     <h2>🧠 Memória do projeto <span class="n">— o que já foi feito, por sessão</span></h2>
     <div id="memoryList"></div>
@@ -203,6 +219,22 @@ const SYSTEMS = [
   { n:'Números de dano por tipo — skill/burst/crit/super-efetivo ▲/fraco ▼/escudo 🛡/miss/heal + efeitos de impacto', s:'p' },
   { n:'Escudos funcionais (shieldHp absorve dano de verdade, número ciano secundário)', s:'p' },
   { n:'Achievements / conquistas', s:'i' },
+  { n:'⭐ Sets de Gear — bônus em 2 e 4 peças (5 sets temáticos) [FASE B · S1]', s:'x' },
+  { n:'⭐ Tooltips ricos em TODOS os painéis (hoje só no Gear; resto usa title= nativo) [FASE B · S7]', s:'x' },
+  { n:'🔴 Dungeons com limite diário real + Rift Tickets como custo (economia furada) [FASE 0 · B1/B2]', s:'x' },
+  { n:'🔴 Carta elemental: luz/trevas com weak morto + aether sem identidade [FASE 0 · B4/B5]', s:'x' },
+  { n:'Conselho Elemental — bônus por composição da formação 2×3 [FASE B · S2]', s:'x' },
+  { n:'Missões diárias e semanais (deltas sobre G.stats) [FASE C · S3]', s:'x' },
+  { n:'Eventos rotativos por zona — Rift Instável do dia [FASE C · S4]', s:'x' },
+  { n:'Escolha de Rota — 3 cartas a cada 10 níveis (agência na marcha) [FASE C · N4]', s:'x' },
+  { n:'Burst Enhancement — burstLevel 1→5 com Burst Cores + Overburst [FASE D · N1]', s:'x' },
+  { n:'Rift Infinito — endgame procedural pós-zona 7 com modificadores [FASE D · N2]', s:'x' },
+  { n:'2ª árvore de Ascensão (Ressonância) [FASE D · S5]', s:'x' },
+  { n:'Vínculos de Resonance — 3 capítulos por par + passiva de dupla [FASE D · N3]', s:'x' },
+  { n:'Forja/Fusão de gear — 3→1 raridade acima, transferir PROC, destrava aether 6★ [FASE E · N5]', s:'x' },
+  { n:'Combate offline REAL (hoje só estima por fórmula) [FASE E · N6]', s:'x' },
+  { n:'Áudio de verdade — trilha por zona, stinger de boss [FASE E · N7]', s:'x' },
+  { n:'🛠️ Skills de IA + scripts: npm test, bump-version, add-memory, simulate, scaffold [FASE A]', s:'x' },
   { n:'Sistema online: contas + save na nuvem (Node/Postgres)', s:'i' },
   { n:'Leaderboard global', s:'i' },
   { n:'Chat / clãs / amigos', s:'i' },
@@ -274,8 +306,153 @@ const PHASES = [
   { name:'5 · Online', items:['Sistema online','Leaderboard','Chat / clãs','Boss mundial','Arena / PvP'] },
 ];
 
+/* ============================================================
+   ROADMAP EXECUTÁVEL — planejado em 10/08/2026 (PLANO_SKILLS.md)
+   REGRA CRÍTICA: as fases são SEQUENCIAIS. Não começar a próxima
+   sem a anterior estar verde (npm test + entrada na Memória).
+   Fazer tudo de uma vez = quebrar tudo no fim.
+   tipo: bug (vermelho) | sys (sistema novo) | tool (ferramenta/skill)
+   ============================================================ */
+const ROADMAP = [
+  { fase:'FASE 0 · 🔴 Tapar o ralo', bloqueia:true,
+    obj:'A economia está furada. Balancear ou somar sistema antes disto é desperdício — todo número seria recalibrado depois.',
+    items:[
+      { id:'B1', t:'bug', n:'Dungeons infinitas — painel promete "3×/dia" mas NÃO há limite no código. Shard Vault paga 22.935 shards/clique no nvl 50; ~135 cliques = progressão inteira de um runner (3,1M)' },
+      { id:'B2', t:'bug', n:'Rift Tickets = moeda fantasma: exibida na topbar e salva, mas NUNCA ganha nem gasta. Vira o custo de entrada das Dungeons (resolve B1 junto)' },
+      { id:'B4', t:'bug', n:'Luz/Trevas com fraqueza MORTA: ambos declaram o outro como strong E weak; strong é testado primeiro, weak nunca roda. Decidir: rivalidade mútua ou triângulo real' },
+      { id:'B5', t:'bug', n:'Aether sem identidade elemental (strong:[] weak:[]) — é o elemento da zona 7/endgame e não faz nada' },
+      { id:'D1', t:'bug', n:'Limpeza de código morto: recomputeRexAtx() (typo), setTimeout vazio no fireBurst, _dealDamageOrig nunca usado' },
+    ]},
+  { fase:'FASE A · ⚙️ Fundação de velocidade',
+    obj:'Automatizar a cerimônia do repo. Paga-se sozinha já na primeira semana.',
+    items:[
+      { id:'A1', t:'tool', n:'package.json + npm test — 6 suítes em paralelo (~55s → ~15s), resumo único, exit≠0 se cair' },
+      { id:'A2', t:'tool', n:'bump-version.mjs — bump atômico dos 4 cache-busts (index.html ×7, main.js, pixi.js, fx.js, selftest.js) + 2 refs no dashboard' },
+      { id:'A3', t:'tool', n:'add-memory.mjs — injeta entrada no array MEMORY (o ritual que mais se esquece)' },
+      { id:'A4', t:'tool', n:'simulate.mjs — engine headless N níveis → DPS, drops/h, shards/h, onde vira parede. DESTRAVA todo balanceamento' },
+    ]},
+  { fase:'FASE B · 👁️ Legibilidade + primeiro conteúdo',
+    obj:'Fazer o jogador ENTENDER os sistemas que já existem, e só então somar o primeiro novo.',
+    items:[
+      { id:'S7', t:'sys', n:'⭐ PEDIDO: Tooltips ricos em TODOS os painéis — hoje o tooltip bonito só existe no Gear; 12 nós Infinity, 19 de Ascensão, cards de squad, chips de Resonance e topbar usam title= nativo. Promover gtipShowFor() a componente global (CSS e anti-corte já prontos)' },
+      { id:'S1', t:'sys', n:'⭐ PEDIDO: Sets de Gear com bônus em 2 e 4 peças (5 sets temáticos) + preencher o pool de arma/núcleo/relíquia nas raridades baixas → conserta o test_gear que falha 1 em cada 3 rodadas' },
+      { id:'S2', t:'sys', n:'Conselho Elemental — 2 iguais: +8% do elemento · 3+: aura de resistência · 6 distintos: Prisma +10%. Depende de B4/B5 decididos. Pluga em applyOvercharge()' },
+    ]},
+  { fase:'FASE C · 📅 Retenção diária',
+    obj:'Responder "por que eu volto amanhã?" — hoje o jogo não responde.',
+    items:[
+      { id:'S3', t:'sys', n:'Missões diárias (3) + semanal (1) — G.stats já conta kills/bursts/syncs/bosses, as missões são deltas sobre contadores prontos' },
+      { id:'S4', t:'sys', n:'Eventos rotativos por zona — 1 zona/dia vira Rift Instável (+50% drop, +30% shards, mobs +15% HP), seed determinístico da data' },
+      { id:'N4', t:'sys', n:'Escolha de Rota — a cada 10 níveis, 3 cartas de bônus/risco. Dá AGÊNCIA num gênero acusado de jogar sozinho' },
+    ]},
+  { fase:'FASE D · 🌟 Endgame e identidade',
+    obj:'O jogo se chama Aether Burst e o Burst é o único sistema que não evolui. E a zona 7 é literalmente o fim do mundo.',
+    items:[
+      { id:'N1', t:'sys', n:'Burst Enhancement — burstLevel 1→5 pago com Burst Cores (recurso que HOJE é órfão: a dungeon dá e nada consome/salva). Nvl 5 = Overburst único por runner' },
+      { id:'N2', t:'sys', n:'Rift Infinito — pós zona 7, profundidade N com hp×1.35^N, recompensa×1.25^N e 1-2 modificadores sorteados. Hoje o jogo TRAVA reiniciando a zona 7 pra sempre' },
+      { id:'S5', t:'sys', n:'2ª árvore de Ascensão (Ressonância) — destino para os pontos depois que os 19 nós atuais fecham. A árvore já é 100% data-driven' },
+      { id:'N3', t:'sys', n:'Vínculos de Resonance — história em 3 capítulos por par (nvl 2/4/6) + passiva permanente de dupla. Transforma barra passiva em motivo pra manter duplas' },
+    ]},
+  { fase:'FASE E · ⚗️ Loop de itens e polimento',
+    obj:'Dar destino ao lixo do inventário e fechar as pontas soltas.',
+    items:[
+      { id:'N5', t:'sys', n:'Forja/Fusão — 3 peças da mesma raridade → 1 acima; transferir PROC entre peças. A raridade aether (6★) já existe no código e NÃO dropa: vira o topo da forja' },
+      { id:'S6', t:'sys', n:'Conquistas — ~30 em faixas, pagando shards/fragmentos/pontos. Maioria é consulta pura a G.stats' },
+      { id:'B7', t:'bug', n:'Exportar/importar save — todo progresso vive em localStorage; limpar o navegador = perder tudo. ~30 linhas' },
+      { id:'B6b',t:'bug', n:'B8: squad pode ficar vazio (sem validação de mínimo) e os 8 runners já vêm desbloqueados — decidir se há progressão de coleção ou remover a promessa da UI' },
+      { id:'N6', t:'sys', n:'Combate offline REAL — hoje offlineReport() só estima por fórmula (não morre, não sobe zona, não pega boss). Usa o MESMO código do simulate.mjs' },
+      { id:'N7', t:'sys', n:'Áudio de verdade — hoje são 5 blips de oscilador. Trilha por zona, stinger de boss, camada que intensifica no Burst' },
+      { id:'Z1', t:'tool', n:'Balanceamento final com o simulador sobre o conjunto inteiro' },
+    ]},
+  { fase:'FASE X0 · 🔧 Refatorar para escalar', bloqueia:true,
+    obj:'EXPANSÃO 20×20 (PLANO_EXPANSAO.md). Sem isto, cada zona nova é copiar-e-colar e o bug do elemento se espalha por 13 mapas.',
+    items:[
+      { id:'X0.1', t:'bug', n:'🔴 element vira campo da ZONA — hoje é índice posicional ["wind","fire",...][zona-1]: da zona 8 em diante TODO inimigo vira "wind" (fallback). A carta elemental morre em 65% do jogo novo' },
+      { id:'X0.2', t:'bug', n:'🔴 spawnWave() ignora a zona: pool é constante global, os mesmos 5 mobs da zona 1 à 20. Criar bestiary[]/boss/miniboss por zona' },
+      { id:'X0.3', t:'bug', n:'Boss se chama "VERDANT RIFT LORD" em TODAS as zonas — nome/arte por zona' },
+      { id:'X0.4', t:'sys', n:'Arquétipos de inimigo (rusher/tank/flanker/caster/swarm) — esqueleto reaproveitável p/ ~40 tipos' },
+      { id:'X0.5', t:'sys', n:'Sync genérico + ~24 pares curados — 20 runners = 190 pares possíveis (hoje 5 à mão) e a strip de Resonance viraria parede de chips' },
+      { id:'X0.6', t:'sys', n:'Filtros/busca em Squad/Gear/Codex — .squad-grid é 2 colunas: 20 runners = 10 linhas de scroll sem filtro' },
+    ]},
+  { fase:'FASE X1 · 🌍 Zonas 8–13 (Atos II–III)',
+    obj:'6 zonas novas com hazard ambiental próprio — o que impede 20 mapas de virarem "o mesmo mapa com outra cor".',
+    items:[
+      { id:'X1.1', t:'sys', n:'Dados das zonas 8–13 (Ashen Wastes, Tidal Ruins, Thornwood Deep, Obsidian Foundry, Mirror Expanse, Gravewind Hollow) + hazards' },
+      { id:'X1.2', t:'sys', n:'6 fundos pintados no padrão anti-flutuação (horizonte a 60%, chão em perspectiva)' },
+      { id:'X1.3', t:'sys', n:'Elencos regionais: 2 mobs exclusivos + 2 compartilhados do ato, por zona' },
+      { id:'X1.4', t:'sys', n:'6 bosses próprios com nome/arte/mecânica' },
+    ]},
+  { fase:'FASE X2 · 👥 Runners 9–14',
+    obj:'6 personagens novos, cada um com mecânica que AINDA NÃO EXISTE no jogo (veneno, taunt, compasso, invisibilidade, superaquecimento, previsão).',
+    items:[
+      { id:'X2.1', t:'sys', n:'VEXA (veneno que ignora DEF) · GRIMM (taunt→escudo) · AURELIO (buff por compassos) · NYX (invisível, 1º golpe crítico) · BOROS (superaquece e explode) · SELENE (prevê golpe, esquiva garantida)' },
+      { id:'X2.2', t:'sys', n:'Sprites + FX de skill dos 6' },
+      { id:'X2.3', t:'sys', n:'Sistema de Recrutamento — começar com 4 e conquistar os demais (hoje os 8 nascem desbloqueados: zero senso de conquista)' },
+      { id:'X2.4', t:'sys', n:'Fragmentos de Runner + Duplicatas (★ extra) — dá destino ao farm repetido de boss' },
+    ]},
+  { fase:'FASE X3 · 📖 Codex Vivo (com recompensas)',
+    obj:'Hoje o Codex é só uma barra de 60 abates por runner. Vira 5 abas que registram o mundo inteiro e PAGAM por isso.',
+    items:[
+      { id:'X3.1', t:'sys', n:'5 abas: Runners · Bestiário (~40) · Zonas (20) · Itens · Lore (~40 entradas)' },
+      { id:'X3.2', t:'sys', n:'Registro automático (silhueta ao avistar) + níveis de conhecimento 1★→3★ com bônus permanente incremental' },
+      { id:'X3.3', t:'sys', n:'Bestiário paga +% de dano permanente CONTRA aquela espécie' },
+      { id:'X3.4', t:'sys', n:'Marcos globais 25/50/75/100% por aba + títulos (base p/ o leaderboard da Fase 5)' },
+    ]},
+  { fase:'FASE X4 · 🏆 Coleções (buff por conjunto catalogado)',
+    obj:'PEDIDO: aba que registra itens e dá buff. Diferente de Sets (só equipado) — Coleção é PERMANENTE, conta mesmo se reciclar.',
+    items:[
+      { id:'X4.1', t:'sys', n:'🎭 Coleções de Personagem — ex.: Arsenal do Kairo → +15% dano de Kairo e +10% lightning p/ o time' },
+      { id:'X4.2', t:'sys', n:'🔥 Elementais (8 itens → +12% do elemento · 16 → +25% e ignora resistência) · 🌍 Regionais (todo gear de uma zona) · 👹 Bestiário (troféus de boss)' },
+      { id:'X4.3', t:'sys', n:'Aba com silhuetas do que falta (direciona o farm) + integração com Sets sem se anular' },
+    ]},
+  { fase:'FASE X5 · 🌌 Zonas 14–20 + Runners 15–20',
+    obj:'Fechar o Ato IV e o elenco de 20.',
+    items:[
+      { id:'X5.1', t:'sys', n:'Zonas 14–20 (Fulgor Peaks → Aether Zenith) + hazards do Ato IV' },
+      { id:'X5.2', t:'sys', n:'DRAKE (ataca do ar) · THALIA (totens) · ORION (muda de elemento) · RAVEN (marca e herda dano) · IGNIS-9 (superaquece e desliga) · ASTRAEA (boss recrutável)' },
+      { id:'X5.3', t:'sys', n:'Boss final AETHER ZENITH (zona 20) + Astraea recrutável ao vencê-lo' },
+    ]},
+  { fase:'FASE X6 · ⚙️ Escala e polimento',
+    obj:'O que 20 mapas e 20 personagens exigem para não virar fricção.',
+    items:[
+      { id:'X6.1', t:'sys', n:'Mapa-múndi — tela de seleção com atos, progresso e hazard visível' },
+      { id:'X6.2', t:'sys', n:'Formações salvas (3 presets) — trocar 6 de 20 à mão por zona é fricção pura' },
+      { id:'X6.3', t:'tool', n:'Lazy-load de assets por zona — projeção ~9,5 MB (hoje 3,3 MB)' },
+      { id:'X6.4', t:'tool', n:'Balanceamento dos 4 atos com simulate.mjs — a curva atual foi feita p/ 7 zonas' },
+    ]},
+];
+
 // memória viva do projeto — REGRA: toda sessão de trabalho termina com entrada aqui
 const MEMORY = [
+  { d:'10/08/2026 (fim de sessão)', t:'🚀 Tudo pronto p/ retomar com UM comando: <code>npm start</code>', items:[
+    '🎯 <code>npm start</code> imprime o painel de comando: estado, PRÓXIMA fase desbloqueada, itens exatos, decisões pendentes e comandos — lê o ROADMAP direto do PROGRESSO.html (fonte única, nunca desatualiza)',
+    '🧪 <code>npm test</code> entregue (item A1 da Fase A): 6 suítes em PARALELO num comando, resumo colorido, exit≠0 se cair. Validado com falha proposital — detecta e bloqueia',
+    '🌐 <code>npm run test:browser</code>: instala o harness Chromium sozinho se o /tmp foi limpo, sobe o servidor, roda a suíte in-game e derruba tudo',
+    '📄 <code>COMECE_AQUI.md</code> — o documento de retomada: 5 comandos, onde paramos, por que a Fase 0 vem antes, as 5 decisões pendentes e as 13 fases em ordem',
+    '🩹 2 bugs achados TESTANDO o próprio tooling: "type":"module" no package.json quebrava as 6 suítes (CommonJS) e a ordem das fases saía E depois de X6 — ambos corrigidos',
+    '⏱️ Alegação corrigida com medição real: paralelo dá ~42s (não ~15s) — o smoke sozinho leva 41s e domina; os outros 5 terminam em ~7s',
+    '✅ Estado final: 145/145 verde · dashboard 13 fases/54 itens executando limpo · nenhum código de JOGO alterado nesta sessão (só planejamento e ferramentas)',
+  ]},
+  { d:'10/08/2026 (expansão)', t:'🌌 Planejada a EXPANSÃO 20×20 — <code>PLANO_EXPANSAO.md</code>', items:[
+    '🗺️ 20 zonas em 4 Atos, cada uma com HAZARD ambiental próprio (brasas, solo escorregadio, silêncio de cooldown, prisma que rotaciona elemento…) — é o que impede 20 mapas de virarem o mesmo mapa com outra cor',
+    '👥 20 runners: os 8 atuais + 12 novos, cada um com mecânica INÉDITA no jogo (veneno que ignora DEF, taunt→escudo, buff por compassos, invisibilidade, superaquecimento, previsão de golpe, ataque aéreo, totens, camaleão elemental, marcação, autodesligamento, boss recrutável)',
+    '👹 Bestiário regional: ~40 inimigos (hoje 7). Fórmula "2 exclusivos + 2 compartilhados por ato" — o que aparece no mapa X não aparece no mapa Y',
+    '📖 Codex Vivo com 5 abas (Runners · Bestiário · Zonas · Itens · Lore), registro automático por silhueta, níveis 1★→3★ e recompensas reais (bestiário paga +% dano permanente contra a espécie)',
+    '🏆 Coleções: buff PERMANENTE por conjunto catalogado (≠ Sets, que só valem equipados) — 4 famílias: Personagem, Elemental, Regional, Bestiário. Reciclar não apaga o registro',
+    '🔴 AUDITORIA DE ESCALA achou 6 quebras: (Q1) element é índice posicional → da zona 8 em diante TODO inimigo vira "wind"; (Q2) spawnWave ignora a zona; (Q3) 20 runners = 190 pares de Sync; (Q4) UI feita p/ 8; (Q5) todos nasceriam desbloqueados; (Q6) assets 3,3MB → ~9,5MB',
+    '⚙️ Criada a FASE X0 (refatorar para escalar) como bloqueadora: sem ela, cada zona nova é copiar-e-colar e o bug do elemento se espalha por 13 mapas',
+  ]},
+  { d:'10/08/2026 (planejamento)', t:'🗺️ Roadmap por fases + auditoria: a economia está furada', items:[
+    '📋 Criado o <code>PLANO_SKILLS.md</code> — skills de IA (5) + sistemas de profundidade, e este card de Roadmap por fases no dashboard (REGRA: fases são sequenciais, não pular)',
+    '🔴 AUDITORIA achou economia furada: Dungeons prometem "3×/dia" mas NÃO têm limite no código — Shard Vault paga 22.935 shards/clique no nvl 50, ~135 cliques = os 3,1M de subir um runner ao nvl 50',
+    '👻 Rift Tickets são moeda FANTASMA: exibida na topbar e salva, nunca ganha nem gasta (2 únicas refs no código: exibir e salvar). Vira custo de entrada das Dungeons',
+    '👻 Burst Cores órfãos: a dungeon dá 3 e NADA no jogo consome, exibe ou salva — nem entra no save()',
+    '⚔️ Luz/Trevas com fraqueza MORTA: ambos declaram o outro como strong E weak; strong é testado primeiro → o weak nunca roda. Aether não é forte nem fraco contra nada',
+    '🌍 Zona 7 é o fim do mundo: nextLevel() faz Math.min(ZONES.length,...) — ao zerar, volta ao nvl 1 da zona 7 PRA SEMPRE. Sem prestígio, sem NG+',
+    '🧪 test_gear falha ~1 em 3 rodadas e é BUG DE CONTEÚDO: só há relíquia em épico/lendário (cobertura dos 8 slots em 140 drops = 67,1% em 2.000 simulações) — jogador novo nunca vê relíquia',
+    '⭐ Pedidos do usuário registrados: Sets de Gear com bônus 2/4 peças (S1) e tooltips ricos em TODOS os painéis (S7 — hoje só existe no Gear; o resto usa title= nativo)',
+    '💡 7 sistemas novos propostos: Burst Enhancement (o jogo se chama Aether Burst e o Burst não evolui), Rift Infinito, Vínculos de Resonance, Escolha de Rota, Forja/Fusão, Offline real, Áudio',
+  ]},
   { d:'10/08/2026 (noite)', t:'Memória viva + suítes blindadas contra wipe', items:[
     '📊 Dashboard reformulado: % automático por fase/sistema, marcações persistentes (v2), fases re-alinhadas com os sistemas reais (F1–F3 = 100%, F4 = 88%)',
     '🧠 Esta seção de memória passou a existir — toda sessão termina com entrada nova aqui (regra do repo)',
@@ -384,6 +561,39 @@ function render(){
   $('overallPct').textContent=pct+'%';
   const arc=326.7*(1-pct/100);
   $('donutArc').setAttribute('stroke-dashoffset',arc);
+
+  // ---- roadmap por fases (sequencial: a fase seguinte só "abre" com a anterior 100%) ----
+  let faseAnteriorOk = true;
+  $('roadmapList').innerHTML = ROADMAP.map(ph=>{
+    const feitos = ph.items.filter(it=>isDone(skey('rm',it.id+it.n), false)).length;
+    const pct = Math.round(feitos/ph.items.length*100);
+    const completa = feitos === ph.items.length;
+    const liberada = faseAnteriorOk;
+    const cor = completa ? 'var(--good)' : (pct>0 ? 'var(--gold)' : 'var(--muted)');
+    const TIPO = { bug:['var(--bad)','BUG'], sys:['var(--gold)','SISTEMA'], tool:['var(--blue)','FERRAMENTA'] };
+    const html = `
+      <div style="margin-bottom:18px;padding:12px;border-radius:10px;border:1px solid ${completa?'var(--good)':(liberada?'var(--line)':'#1a2040')};
+                  background:${liberada?'rgba(255,255,255,.02)':'rgba(0,0,0,.25)'};${liberada?'':'opacity:.55'}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+          <b style="font-size:14px">${completa?'✅ ':''}${ph.fase}${ph.bloqueia?' <span style="color:var(--bad)">⛔</span>':''}</b>
+          <span style="color:${cor};font-weight:700;font-size:12px">${feitos}/${ph.items.length} · ${pct}%</span>
+        </div>
+        <div style="color:var(--muted);font-size:12px;margin-bottom:8px">${ph.obj}</div>
+        ${!liberada?'<div style="color:var(--bad);font-size:11px;margin-bottom:8px">🔒 travada — feche a fase anterior primeiro</div>':''}
+        <div class="bar"><div style="width:${pct}%;background:${cor}"></div></div>
+        <ul class="tasks" style="margin-top:8px">${ph.items.map(it=>{
+          const k = skey('rm', it.id+it.n);
+          const done = isDone(k,false);
+          const [c,lbl] = TIPO[it.t];
+          return `<li class="${done?'done':''}" onclick="toggle('${k}', ${done})">
+            <span class="chk">${done?'✓':''}</span>
+            <span class="name"><b style="color:${c};font-family:monospace;font-size:11px">${it.id}</b> ${it.n}</span>
+            <span class="tag" style="background:#12253a;color:${c}">${lbl}</span></li>`;
+        }).join('')}</ul>
+      </div>`;
+    faseAnteriorOk = faseAnteriorOk && completa;
+    return html;
+  }).join('');
 
   // ---- memória (changelog por sessão) ----
   $('memoryList').innerHTML=MEMORY.map(m=>`

@@ -2,6 +2,18 @@
 
 **Idle RPG com sistema de Burst e Resonance** — versão web (HTML + Canvas + JS, sem frameworks).
 
+> ## 🚀 Retomando o trabalho? **`npm start`**
+> Um comando mostra onde o projeto está, qual é a próxima fase e o que fazer.
+> Detalhes em **`COMECE_AQUI.md`**.
+>
+> | Comando | O que faz |
+> |---|---|
+> | `npm start` | painel de comando (estado + próxima fase + decisões pendentes) |
+> | `npm test` | 6 suítes em paralelo, num comando |
+> | `npm run dev` | servidor em `:8000` |
+> | `npm run test:browser` | auto-teste no Chromium real (auto-instala o harness) |
+> | `npm run plano` | lista os documentos de planejamento |
+
 > 📊 **Dashboard de Progresso:** abra o **`PROGRESSO.html`** para ver gráficos de andamento,
 > checklist de sistemas (prontos/em andamento/pendentes/ideias), inventário de assets
 > (prontos/faltantes) e roadmap por fases. Os checkmarks salvam no navegador.
