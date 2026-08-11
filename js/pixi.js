@@ -60,6 +60,7 @@ window.PIXIR = (function () {
   let unitG = null;    // todas as unidades (runners + enemies)
   let spriteLayer = null; // sprites de imagem dos runners (GPU)
   let fxG = null;      // FX (partículas, anéis, feixes)
+  let fxSprC = null;   // sprites de skill (projéteis/cortes por imagem)
   let textLayer = null;// container de textos (números, flutuantes)
   let hudG = null;     // barras de HP / progresso / boss
   let overlayG = null; // flash + vignette
@@ -90,7 +91,9 @@ window.PIXIR = (function () {
       moteG = new PIXI.Graphics();
       unitG = new PIXI.Graphics();
       spriteLayer = new PIXI.Container();
+      spriteLayer.sortableChildren = true;   // zIndex de profundidade por frame
       fxG = new PIXI.Graphics();
+      fxSprC = new PIXI.Container();
       textLayer = new PIXI.Container();
       hudG = new PIXI.Graphics();
       overlayG = new PIXI.Graphics();
@@ -99,6 +102,7 @@ window.PIXIR = (function () {
       app.stage.addChild(spriteLayer);
       app.stage.addChild(unitG);
       app.stage.addChild(fxG);
+      app.stage.addChild(fxSprC);
       app.stage.addChild(textLayer);
       app.stage.addChild(hudG);
       app.stage.addChild(overlayG);
@@ -217,9 +221,10 @@ window.PIXIR = (function () {
     const a = r.alive ? 1 : 0.25;
     const bw = 18 * s, bh = 26 * s;
 
-    // sombra
-    g.beginFill(0x000000, 0.45 * a);
-    g.drawEllipse(dx, r.y + 2, 22 * s, 7 * s);
+    // sombra de contato (proporcional à profundidade)
+    const shw0 = 30 * depthScale(r.y) * s;
+    g.beginFill(0x000000, 0.5 * a);
+    g.drawEllipse(dx, r.y + 3, shw0, shw0 * 0.3);
 
     // aura
     const auraR = (28 + (r.castGlow > 0 ? 14 : 0) + (r.burstReady ? 10 : 0)) * s;
@@ -320,7 +325,7 @@ window.PIXIR = (function () {
   /* ---------- sprites dos runners (arte PNG) ---------- */
   const runnerSprites = {};   // runnerId -> PIXI.Sprite
   const SPRITE_BASE = 'assets/runners/';
-  const SPRITE_V = 'c70f01f'; // cache-busting dos sprites
+  const SPRITE_V = 'bgv2-0810'; // cache-busting dos sprites
 
   // Carrega o sprite de um runner via PIXI.Assets (ou Texture.from). Fica no
   // cache; se falhar/ausente, o renderer cai para o desenho vetorial (fallback).
@@ -342,7 +347,9 @@ window.PIXIR = (function () {
   }
   function makeRunnerSprite(id, tex) {
     const spr = new PIXI.Sprite(tex);
-    spr.anchor.set(0.5, 0.5);
+    // âncora na base central (pés): o ponto do slot é sempre a base do sprite,
+    // independentemente do tamanho/proporção da textura carregada
+    spr.anchor.set(0.5, 1);
     return spr;
   }
 
@@ -363,9 +370,10 @@ window.PIXIR = (function () {
     const s = r.burstScale || 1;
     const el = ELEMENTS[r.element];
     const a = r.alive ? 1 : 0.25;
-    // sombra
-    g.beginFill(0x000000, 0.45 * a);
-    g.drawEllipse(r.x, r.y + 2, 22 * s, 7 * s);
+  // sombra de contato (proporcional à profundidade — "cola" o personagem no chão)
+  const shw = 30 * depthScale(r.y) * s;
+  g.beginFill(0x000000, 0.5 * a);
+  g.drawEllipse(r.x, r.y + 3, shw, shw * 0.3);
     // aura
     const auraR = (28 + (r.castGlow > 0 ? 14 : 0) + (r.burstReady ? 10 : 0)) * s;
     g.beginFill(col(el.color), (r.burstReady ? 0.3 : 0.15) * a);
@@ -499,6 +507,45 @@ window.PIXIR = (function () {
     }
   }
 
+  /* ---------- sprites de skill (projéteis/cortes por imagem) ---------- */
+  const fxSprCache = {};   // key -> PIXI.Sprite
+  function ensureFxSprite(key) {
+    if (fxSprCache[key] !== undefined) return fxSprCache[key];
+    fxSprCache[key] = null; // marca "em progresso"
+    try {
+      const url = skillSpriteUrl(key);   // helpers vêm do fx.js
+      const tex = (PIXI.Assets && PIXI.Assets.load) ? null : (PIXI.Texture.from && PIXI.Texture.from(url));
+      if (tex && tex.valid) { fxSprCache[key] = makeFxSprite(tex); return fxSprCache[key]; }
+      if (PIXI.Assets && PIXI.Assets.load) {
+        PIXI.Assets.load(url).then(t => { if (t && t.valid) fxSprCache[key] = makeFxSprite(t); }).catch(() => {});
+      }
+    } catch (e) { /* fica procedural */ }
+    return null;
+  }
+  function makeFxSprite(tex) {
+    const spr = new PIXI.Sprite(tex);
+    spr.anchor.set(0.5, 0.5);            // centro (projéteis giram em torno do próprio eixo)
+    return spr;
+  }
+  function drawFxSprites() {
+    for (let i = fxSprC.children.length - 1; i >= 0; i--) fxSprC.children[i].visible = false;
+    for (const s of FX.sprites) {
+      const spr = ensureFxSprite(s.key);
+      if (!spr) continue;
+      const a = fxSpriteAlpha(s);
+      if (a <= 0.01) continue;
+      const h = s.size;
+      const w = h * ((spr.texture.width / spr.texture.height) || 2);
+      spr.width = s.flipX ? -w : w;
+      spr.height = h;
+      spr.x = s.x; spr.y = s.y;
+      spr.rotation = s.rot || 0;
+      spr.alpha = a;
+      spr.visible = true;
+      if (!fxSprC.children.includes(spr)) fxSprC.addChild(spr);
+    }
+  }
+
   /* ---------- FX ---------- */
   function drawFX() {
     fxG.clear();
@@ -519,6 +566,22 @@ window.PIXIR = (function () {
       fxG.lineStyle(b.width, col(b.color), a);
       fxG.moveTo(b.x1, b.y1); fxG.lineTo(b.x2, b.y2);
       fxG.stroke();
+    }
+    fxG.lineStyle(0);
+    // raios serrilhados (mesma FX.lightning do renderer Canvas)
+    for (const b of FX.bolts) {
+      const t = Math.max(0, b.life / b.maxLife);
+      const flick = 0.6 + 0.4 * Math.sin(b.life * 95);
+      const a = t * flick;
+      const path = (pts) => { fxG.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) fxG.lineTo(pts[i][0], pts[i][1]); fxG.stroke(); };
+      fxG.lineStyle(b.width * 3.2, col(b.color), a * 0.28); path(b.pts);
+      fxG.lineStyle(b.width, col(b.color), a); path(b.pts);
+      fxG.lineStyle(Math.max(1, b.width * 0.4), 0xffffff, a * 0.95); path(b.pts);
+      for (const bp of b.branches) { fxG.lineStyle(Math.max(1, b.width * 0.5), col(b.color), a * 0.8); path(bp); }
+      if (b.flash) {
+        fxG.beginFill(0xffffff, a * 0.35); fxG.drawCircle(b.x2, b.y2, 42); fxG.endFill();
+        fxG.beginFill(col(b.color), a * 0.30); fxG.drawCircle(b.x1, b.y1, 56); fxG.endFill();
+      }
     }
     fxG.lineStyle(0);
     // partículas
@@ -542,16 +605,17 @@ window.PIXIR = (function () {
     while (textLayer.children.length) textLayer.removeChildAt(0, true);
     for (const d of FX.damageNumbers) {
       const a = Math.min(1, (d.life / d.maxLife) * 1.6);
-      const grow = d.crit ? (1.25 - 0.25 * a) : 1;
-      const t = new PIXI.Text(formatNumber(d.amount), {
+      const grow = d.crit ? (1.25 - 0.25 * a) : (d.kind === 'burst' ? (1.18 - 0.18 * a) : 1);
+      const tag = fxDamageTag(d);
+      const t = new PIXI.Text(fxDamageLabel(d), {
         fontFamily: 'Orbitron, sans-serif', fontSize: d.size * grow,
-        fontWeight: '900', fill: d.color, stroke: '#000', strokeThickness: 4, align: 'center',
+        fontWeight: '900', fill: d.crit ? '#ffd23f' : d.color, stroke: '#000', strokeThickness: 4, align: 'center',
       });
       t.anchor.set(0.5, 0.5); t.alpha = a;
       t.position.set(d.x, d.y);
       textLayer.addChild(t);
-      if (d.crit) {
-        const c = new PIXI.Text('CRIT!', { fontFamily: 'Orbitron', fontSize: 12 * grow, fontWeight: '900', fill: '#ffd23f', stroke: '#000', strokeThickness: 3, align: 'center' });
+      if (tag) {
+        const c = new PIXI.Text(tag.text, { fontFamily: 'Orbitron', fontSize: 12 * grow, fontWeight: '900', fill: tag.color, stroke: '#000', strokeThickness: 3, align: 'center' });
         c.anchor.set(0.5, 0.5); c.alpha = a; c.position.set(d.x, d.y - d.size * grow - 4);
         textLayer.addChild(c);
       }
@@ -594,42 +658,58 @@ window.PIXIR = (function () {
     drawBG(z);
     drawMotes(z);
 
-    // unidades ordenadas por profundidade (um único Graphics + sprites, redesenha a cada frame)
-    // inimigos primeiro (atrás), runners por cima (nunca sobrepõem)
-    const enemies = [...G.enemies].sort((a, b) => a.y - b.y);
-    const runners = [...G.runners].sort((a, b) => a.y - b.y);
-    const units = [...enemies, ...runners];
+    // unidades ordenadas por profundidade REAL (algoritmo do pintor, y crescente):
+    // inimigos e runners ENTRELAÇADOS — quem está mais à frente (maior y)
+    // cobre quem está atrás, e o zIndex é reatribuído a cada frame (a ordem
+    // de addChild sozinha ficava travada e os inimigos cobriam os runners).
+    const units = [...G.enemies, ...G.runners].sort((a, b) => a.y - b.y);
     unitG.clear();
     // esconde sprites do frame anterior
     for (let i = spriteLayer.children.length - 1; i >= 0; i--) spriteLayer.children[i].visible = false;
-    for (const u of units) {
+    for (let ui = 0; ui < units.length; ui++) {
+      const u = units[ui];
       if (u.kind === 'runner') {
         const spr = drawRunnerUnit(unitG, u);
         if (spr) {
-          // posiciona o sprite (já ancorado no centro)
+          // posiciona o sprite ancorado pelos pés (anchor 0.5,1)
           const s = u.burstScale || 1;
-          const bob = Math.sin(u.bob) * 2;
           // escala por profundidade: mais à frente (maior y) = maior sprite
-          const depth = Math.min(1.18, Math.max(0.88, 0.88 + (u.y - (GROUND_Y-44)) / 44 * 0.3));
-          const hgt = 96 * depth * s;            // altura alvo em unidades de jogo
-          spr.height = hgt; spr.width = hgt;
+          const depth = depthScale(u.y);
+          // MOVIMENTO COM PÉS PLANTADOS: respiração (squash & stretch) em
+          // torno da âncora inferior — a base NUNCA sai do ponto do slot;
+          // no ataque, leve inclinação para frente em torno dos pés.
+          const breathe = Math.sin(u.bob) * 0.03;         // ±3% de altura
+          const hgt = 96 * depth * s;                     // altura alvo em unidades de jogo
+          const tw = spr.texture.width || 1, th = spr.texture.height || 1;
+          const wid0 = hgt * (tw / th);                   // preserva a proporção do sprite
+          spr.height = hgt * (1 + breathe);
+          spr.width = wid0 * (1 - breathe * 0.6);
           spr.x = u.x;
-          spr.y = u.y + bob - hgt * 0.5;         // pé próximo ao ponto de apoio
+          spr.y = u.y;                                    // pés SEMPRE no ponto do slot
+          spr.rotation = u.swing * 0.12;                  // inclinação de ataque
           spr.alpha = u.alive ? 1 : 0.35;
           spr.visible = true;
+          spr.zIndex = ui;
           if (!spriteLayer.children.includes(spr)) spriteLayer.addChild(spr);
         }
       } else {
         const spr = drawEnemyUnit(unitG, u);
         if (spr) {
-          const bob = Math.sin(u.bob) * 2;
-          const depth = Math.min(1.18, Math.max(0.88, 0.88 + (u.y - (GROUND_Y-44)) / 44 * 0.3));
+          // PÉS PLANTADOS TAMBÉM NOS INIMIGOS: nada de transladar para
+          // cima/baixo (parecia flutuar) — squash & stretch na base.
+          const squash = Math.sin(u.bob) * 0.05;          // ±5% de altura
+          const depth = depthScale(u.y);
           const hgt = u.size * 2.4 * depth;      // altura escala com tamanho × profundidade
-          spr.height = hgt; spr.width = hgt;
+          const tw = spr.texture.width || 1, th = spr.texture.height || 1;
+          const wid0 = hgt * (tw / th);
+          spr.height = hgt * (1 + squash);
+          spr.width = wid0 * (1 - squash * 0.6);
           spr.x = u.x;
-          spr.y = u.y + bob - hgt * 0.5;
+          spr.y = u.y;                           // base colada no chão
+          spr.rotation = Math.sin(u.bob) * 0.05; // ginga de marcha
           spr.alpha = u.alive ? 1 : 0.35;
           spr.visible = true;
+          spr.zIndex = ui;
           if (!spriteLayer.children.includes(spr)) spriteLayer.addChild(spr);
         }
       }
@@ -637,6 +717,7 @@ window.PIXIR = (function () {
 
     drawHPBars();
     drawFX();
+    drawFxSprites();
     drawTexts();
     drawOverlay();
     applyCam();

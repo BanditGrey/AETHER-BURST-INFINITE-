@@ -69,13 +69,20 @@
   .dot.p{background:var(--good)}.dot.e{background:var(--gold)}.dot.x{background:var(--bad)}.dot.i{background:var(--blue)}
   .btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px}
   .btn:hover{border-color:var(--aether)}
-  .btn-row{display:flex;gap:8px;margin-top:8px}
+  .btn-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
   .counter{color:var(--muted);font-size:12px}
+  /* memória / changelog */
+  .mem-entry{display:flex;gap:14px;padding:10px 4px;border-bottom:1px dashed var(--line)}
+  .mem-entry:last-child{border-bottom:none}
+  .mem-date{font-family:monospace;font-size:11px;color:var(--aether);white-space:nowrap;padding-top:2px;min-width:110px}
+  .mem-title{font-weight:700;font-size:14px;margin-bottom:4px}
+  .mem-body ul{list-style:none}
+  .mem-body li{font-size:13px;padding:3px 0;color:#c6d2f0}
 </style>
 </head>
 <body>
   <h1>⚡ AETHER BURST: INFINITE — Dashboard de Progresso</h1>
-  <div class="sub">Controle total do projeto (desenvolvimento solo) · atualizado automaticamente conforme você marca as tarefas · os checkmarks ficam salvos no navegador.</div>
+  <div class="sub">Controle total do projeto (desenvolvimento solo) · itens <b>Pronto</b> contam automaticamente · overrides manuais salvos no navegador · <b>última atualização: 10/08/2026</b> (build gear11-0810 / st1-0810).</div>
 
   <!-- MÉTRICAS + DONUT -->
   <div class="grid">
@@ -108,12 +115,14 @@
       <h2>O jogo agora</h2>
       <ul style="list-style:none;font-size:13px">
         <li style="padding:4px 0">📦 <b>Motor:</b> HTML5 Canvas 2D + WebGL (PixiJS, opt-in)</li>
-        <li style="padding:4px 0">🗂️ <b>Estrutura:</b> <code>index.html</code> · <code>css/</code> · <code>js/</code> (data, engine, fx, pixi, main) · <code>assets/</code></li>
+        <li style="padding:4px 0">🗂️ <b>Estrutura:</b> <code>index.html</code> · <code>css/</code> · <code>js/</code> (data, engine, fx, pixi, main, <b>selftest</b>) · <code>assets/</code> · <code>tests/</code> (6 suítes <b>trackeadas no git</b>)</li>
+        <li style="padding:4px 0">🧪 <b>QA:</b> auto-teste in-game "olho humano" (botão <b>Testes</b>, 20 frentes) + <b>145 checks node</b> + harness Chromium headless</li>
         <li style="padding:4px 0">💾 <b>Save:</b> localStorage (offline). Online ainda é plano → <code>PLAN_ONLINE.md</code></li>
-        <li style="padding:4px 0">🌐 <b>Status:</b> jogo web jogável, roda sem internet (Canvas)</li>
+        <li style="padding:4px 0">🌐 <b>Status:</b> jogo web jogável, roda sem internet (Canvas) · build <code>gear11-0810 / st1-0810</code></li>
       </ul>
       <div class="btn-row">
         <button class="btn" onclick="location='index.html'">▶ Abrir o jogo</button>
+        <button class="btn" onclick="location='index.html?selftest=1'">🧪 Auto-teste</button>
         <button class="btn" onclick="location='PLANO.md'">📋 Plano mestre</button>
         <button class="btn" onclick="location='PLAN_ONLINE.md'">📄 Ver plano online</button>
         <button class="btn" onclick="resetChecks()">↺ Resetar checkmarks</button>
@@ -152,14 +161,20 @@
     <ul class="tasks" id="ideaList"></ul>
   </div>
 
-  <div class="footer">Dashboard de desenvolvimento · AETHER BURST: INFINITE · os checkmarks persistem neste navegador (localStorage).</div>
+  <!-- MEMÓRIA / CHANGELOG -->
+  <div class="card" style="margin-top:16px">
+    <h2>🧠 Memória do projeto <span class="n">— o que já foi feito, por sessão</span></h2>
+    <div id="memoryList"></div>
+  </div>
+
+  <div class="footer">Dashboard de desenvolvimento · AETHER BURST: INFINITE · itens "Pronto" contam automaticamente; os overrides manuais persistem neste navegador (localStorage).<br>Regras do repo: atualizar este dashboard a cada mudança · feature nova ⇒ entrada no auto-teste (🧪) e aqui na Memória · arte nova ⇒ <code>assets/REFERENCIA_ARTE.md</code>.</div>
 
 <script>
 // ================= DADOS (edite aqui para manter o controle) =================
 // status: p = pronto | e = em andamento | x = pendente/parado | i = ideia
 const SYSTEMS = [
   { n:'Núcleo de combate (ataque, alcance, melee avança, crit, esquiva, elementos, DEF/PEN)', s:'p' },
-  { n:'Formação de esquadrão (Vanguard 3 + Rear 2)', s:'p' },
+  { n:'Formação de esquadrão 2×3 fixa — 6 slots no setor esquerdo, âncora nos pés', s:'p' },
   { n:'Aether Burst (barras, cinemática, dano em área)', s:'p' },
   { n:'Burst Sync + Resonance (pares, níveis)', s:'p' },
   { n:'Progressão de marcha e zonas (nível 1–100, troca de zona)', s:'p' },
@@ -169,14 +184,24 @@ const SYSTEMS = [
   { n:'Árvore de Ascensão (passivas gastáveis com pontos)', s:'p' },
   { n:'Codex (lore + progresso de abates por runner)', s:'p' },
   { n:'Dungeons (4 modos com recompensas)', s:'p' },
-  { n:'Inventário de Gear (coleta/drop de equipamentos)', s:'e' }, // coletar/dropar sim; equipar de verdade não
   { n:'Sons (WebAudio SFX) + mute', s:'p' },
   { n:'Render WebGL via PixiJS (opt-in ?pixi=1, fallback Canvas)', s:'p' },
   { n:'Sprites dos Runners integrados no render WebGL', s:'p' },
-  { n:'Equipar gear de verdade (slot weapon/core/relic, efeitos aplicados)', s:'x' },
+  { n:'Inventário de Gear organizado — grade de ícones c/ arte própria, tooltip rico no hover, scroll por roda/arraste, filtros por slot, ordenação, cap 500 sem exclusão forçada', s:'p' },
+  { n:'Equipar gear de verdade (8 slots por runner: 4 equipamentos + 4 acessórios, stats aplicados, troca/desequipar, reciclar opcional)', s:'p' },
+  { n:'Acessórios — 20 peças novas: Anel 💍 (CRT/CDG) · Brinco ✨ (PEN/ACH) · Colar 📿 (HP/DEF) · Pulseira ⛓️ (SPD/EVA), 5 raridades cada', s:'p' },
+  { n:'Gear PROCS reais (11 efeitos especiais: cadeia Volt, pós-esquiva ×3, congelar, +2%/ataque, Gravity Mark, cura no Burst, sobreviver 1×/combate…)', s:'p' },
+  { n:'Painel Gear estilo tela de equipamento (retrato, 8 slots-socket, PODER, stats, tooltips ricos de skill/passiva, equip em 1 clique)', s:'p' },
   { n:'Sprites de inimigos e bosses', s:'p' },
   { n:'Arte de fundo por zona (7 zonas)', s:'p' },
-  { n:'UI estilizada com cara de jogo (menus, painéis, transições)', s:'e' },
+  { n:'Idle dos Runners com pés plantados (squash & stretch, anti-flutuação)', s:'p' },
+  { n:'Cena de combate polida — inimigos também com pés plantados, profundidade runners×inimigos entrelacada por y (zIndex por frame no Pixi), triângulos-placeholder removidos de cima da arte pintada, raio de burst procedural serrilhado c/ ramos + clarão de origem/impacto (Canvas e Pixi)', s:'p' },
+  { n:'Painel Gear blindado — corrente de altura consertada (stats sempre visíveis, bag rola de verdade), clique-equip não é mais sequestrado pelo arraste da bag (pointer capture só após o threshold), tooltip flutuante click-through (só o botão ♻ recebe clique)', s:'p' },
+  { n:'Auto-teste in-game c/ "olho humano" (botão 🧪 Testes) — análise de pixels dos sprites (vazio/placeholder), geometria real dos painéis, clique físico, profundidade da cena, raio serrilhado; 20 frentes; snapshot/restore não suja a conta; ?selftest=1 headless p/ CI; REGRA: feature nova ⇒ entrada nova no SELFTESTS', s:'p' },
+  { n:'Sprites de skills (8 Runners + 7 mobs) — projéteis/cortes/ondas por elemento', s:'p' },
+  { n:'UI com cara de jogo (tela de título/splash, wipe de zona, overlay de pausa, painéis animados)', s:'p' },
+  { n:'Números de dano por tipo — skill/burst/crit/super-efetivo ▲/fraco ▼/escudo 🛡/miss/heal + efeitos de impacto', s:'p' },
+  { n:'Escudos funcionais (shieldHp absorve dano de verdade, número ciano secundário)', s:'p' },
   { n:'Achievements / conquistas', s:'i' },
   { n:'Sistema online: contas + save na nuvem (Node/Postgres)', s:'i' },
   { n:'Leaderboard global', s:'i' },
@@ -212,41 +237,100 @@ const ASSETS = [
   { n:'Inimigo — Elite ✓', c:'assets/enemies/elite.png', s:'ok' },
   { n:'Miniboss — Rift Warden ✓', c:'assets/enemies/miniboss.png', s:'ok' },
   { n:'Boss — Rift Lord ✓', c:'assets/enemies/riftlord.png', s:'ok' },
-  { n:'Fundo — 7 zonas ✓', c:'assets/bg/z1_verdant.jpg', s:'ok' },
-  { n:'Ícones de equipamentos / itens', s:'no' },
+  { n:'Fundo — 7 zonas ✓ (v2: plano de chão em perspectiva, anti-flutuação)', c:'assets/bg/z1_verdant.jpg', s:'ok' },
+  // ---------- skill sprites — runners + mobs (integrados via FX.sprite) ----------
+  { n:'Skill — KAIRO "Volt Fang" (raio) ✓ PILOTO integrado', c:'assets/skills/kairo_volt_fang.png', s:'ok' },
+  { n:'Skill — ZAEL "Crimson Slash Barrage" (fogo)', c:'assets/skills/zael_crimson_slash.png', s:'ok' },
+  { n:'Skill — SERAPH "Event Horizon" (trevas)', c:'assets/skills/seraph_event_horizon.png', s:'ok' },
+  { n:'Skill — LYRA "Radiant Strike" (luz)', c:'assets/skills/lyra_radiant_strike.png', s:'ok' },
+  { n:'Skill — FROST "Glacial Lance Burst" (gelo)', c:'assets/skills/frost_glacial_lance.png', s:'ok' },
+  { n:'Skill — NINA "Surge Cannon" (raio)', c:'assets/skills/nina_surge_cannon.png', s:'ok' },
+  { n:'Skill — REX "Savage Charge" (vento)', c:'assets/skills/rex_savage_charge.png', s:'ok' },
+  { n:'Skill — SABLE "Shadow Execution" (trevas)', c:'assets/skills/sable_shadow_execution.png', s:'ok' },
+  { n:'Skill mob — Hollow "Rush Swipe"', c:'assets/skills/mob_hollow_swipe.png', s:'ok' },
+  { n:'Skill mob — Brute "Crushing Slam"', c:'assets/skills/mob_brute_slam.png', s:'ok' },
+  { n:'Skill mob — Phantom "Shadow Lunge"', c:'assets/skills/mob_phantom_lunge.png', s:'ok' },
+  { n:'Skill mob — Surge "Death Pulse"', c:'assets/skills/mob_surge_pulse.png', s:'ok' },
+  { n:'Skill mob — Elite "Rift Strike"', c:'assets/skills/mob_elite_strike.png', s:'ok' },
+  { n:'Skill mob — Rift Warden "Warden Slam" (miniboss)', c:'assets/skills/mob_warden_slam.png', s:'ok' },
+  { n:'Skill mob — Rift Lord "Lord Wrath" (boss)', c:'assets/skills/mob_riftlord_wrath.png', s:'ok' },
+  { n:'Ícone gear — Arma (katana aether) ✓', c:'assets/icons/slot_weapon.png', s:'ok' },
+  { n:'Ícone gear — Armadura (peitoral rúnico) ✓', c:'assets/icons/slot_armor.png', s:'ok' },
+  { n:'Ícone gear — Núcleo (orbe aether) ✓', c:'assets/icons/slot_core.png', s:'ok' },
+  { n:'Ícone gear — Relíquia (talismã violeta) ✓', c:'assets/icons/slot_relic.png', s:'ok' },
+  { n:'Ícone gear — Anel (gema carmesim) ✓', c:'assets/icons/slot_ring.png', s:'ok' },
+  { n:'Ícone gear — Brinco (gota violeta) ✓', c:'assets/icons/slot_earring.png', s:'ok' },
+  { n:'Ícone gear — Colar (coração esmeralda) ✓', c:'assets/icons/slot_necklace.png', s:'ok' },
+  { n:'Ícone gear — Pulseira (cuff de vento) ✓', c:'assets/icons/slot_bracelet.png', s:'ok' },
   { n:'Sprites de armas por classe (opcional pós-integrado)', s:'i' },
 ];
 
-// fases: [nome, [{sistema}, ...]] — usado no roadmap
+// fases: as substrings precisam casar com os NOMES ATUAIS dos SYSTEMS (includes)
 const PHASES = [
-  { name:'1 · Fundação (jogo jogável)', items:['Núcleo de combate','Formação','Aether Burst','Progression','Economia','Save/offline'] },
-  { name:'2 · Sistemas de progressão', items:['Infinity Circuit','Ascensão','Codex','Dungeons','Gear (inventário)'] },
-  { name:'3 · Polimento visual', items:['WebGL/PixiJS','Sprites Runners','Render de fundo','Sons','Sprites de inimigos','Arte de fundo por zona','UI estilizada'] },
-  { name:'4 · Conteúdo & profundidade', items:['Equipar de verdade','Achievements','Balanceamento fino'] },
-  { name:'5 · Online', items:['Contas','Save na nuvem','Leaderboard','Social','Eventos'] },
+  { name:'1 · Fundação (jogo jogável)', items:['Núcleo de combate','Formação de esquadrão','Aether Burst','Progressão de marcha','Economia','Save/Load'] },
+  { name:'2 · Sistemas de progressão', items:['Infinity Circuit','Árvore de Ascensão','Codex','Dungeons','Inventário de Gear'] },
+  { name:'3 · Polimento visual', items:['Render WebGL','Sprites dos Runners','Sons','Sprites de inimigos','Arte de fundo','UI com cara de jogo','Idle dos Runners','Sprites de skills','Números de dano por tipo','Escudos funcionais'] },
+  { name:'4 · Conteúdo & profundidade', items:['Equipar gear','Acessórios','Gear PROCS','Painel Gear estilo','Cena de combate polida','Painel Gear blindado','Auto-teste','Achievements'] },
+  { name:'5 · Online', items:['Sistema online','Leaderboard','Chat / clãs','Boss mundial','Arena / PvP'] },
 ];
 
-const KEY='aether_progress_v1';
+// memória viva do projeto — REGRA: toda sessão de trabalho termina com entrada aqui
+const MEMORY = [
+  { d:'10/08/2026 (noite)', t:'Memória viva + suítes blindadas contra wipe', items:[
+    '📊 Dashboard reformulado: % automático por fase/sistema, marcações persistentes (v2), fases re-alinhadas com os sistemas reais (F1–F3 = 100%, F4 = 88%)',
+    '🧠 Esta seção de memória passou a existir — toda sessão termina com entrada nova aqui (regra do repo)',
+    '🧪 tests/ agora é TRACKEADO no git: 6 suítes Node refeitas = 145 checagens (gear 27 · dmg 26 · procs 23 · skills/assets 19 · ui 19 · smoke 31)',
+    '🛡️ Regressão nova: test_skills2 valida no DISCO todo FX.sprite/runner/inimigo/fundo/ícone referenciado — "sem assets" nunca mais passa em silêncio',
+    '🩹 Fix encontrado pela suíte refeita: runnerGear() migrava gear legado (array) JOGANDO AS PEÇAS FORA — agora preserva tudo',
+    '✅ Validação completa antes do push: 145/145 Node + 20/20 no browser real (Chromium headless)',
+  ]},
+  { d:'10/08/2026', t:'Qualidade total + QA automatizado', items:[
+    '🧪 Auto-teste in-game c/ "olho humano" (botão Testes): pixels dos sprites, geometria real dos painéis, clique físico, profundidade da cena — 20 frentes, ?selftest=1 headless',
+    '🛠️ Harness de browser real no sandbox (Chromium headless local) — bugs de interação/layout agora são provados com clique de verdade antes do push',
+    '⚡ Raio do burst virou FX procedural serrilhado (ramos + clarão origem/impacto) — adeus traço reto "caindo do nada"',
+    '🧍 Inimigos com pés plantados + profundidade runners×inimigos entrelacada por y (zIndex/frame no Pixi) — nada flutua nem cobre ninguém',
+    '🌲 Triângulos-placeholder do parallax não cobrem mais a arte pintada das zonas',
+    '🩹 Painel gear blindado: corrente de altura consertada (stats visíveis, bag rola), equip não é mais sequestrado pelo pointer capture, tooltip click-through',
+  ]},
+  { d:'10/08/2026', t:'RIFT GEAR completo (a grande virada de conteúdo)', items:[
+    '💍 4 slots de acessório (anel/brinco/colar/pulseira) + 20 peças novas + 5 armaduras — todos os 8 slots dropam',
+    '🎒 Inventário em grade de ícones com ARTE gerada (8 ícones cutout 192px), bag com roda/arraste, filtros e ordenação',
+    '🖼️ Painel tela-de-equipamento: retrato, sockets losango, PODER, stats, tooltips ricos de skill/passiva/elemento/burst',
+    '💬 Tooltip de item v2 (arte + chip de raridade PT) e tooltip flutuante global position:fixed que nunca é cortado',
+  ]},
+  { d:'antes (sessões anteriores)', t:'Base do jogo', items:[
+    '⚔️ Núcleo: combate, esquadrão 2×3, Burst/Sync/Resonance, zonas 1–100, economia, save offline',
+    '🎨 Arte: 8 runners, 7 inimigos, 15 sprites de skill, 7 fundos pintados — tudo gerado e integrado',
+    '📊 Sistemas: Infinity Circuit, Ascensão, Codex, Dungeons, PROCS de gear, escudos reais',
+  ]},
+];
+
+const KEY='aether_progress_v2';
 // ===========================================================================
 
 const $=id=>document.getElementById(id);
 let state={};
 try{ state=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ state={}; }
 function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} }
-function isDone(k){ return state[k]===true; }
-function toggle(k){ state[k]=!state[k]; save(); render(); }
+/* chave sanitizada ÚNICA (antes o toggle usava chave diferente da leitura e
+   o checkmark nunca persistia) */
+const skey=(p,n)=> p+'_'+n.replace(/[^a-zA-Z0-9_]/g,'');
+/* 'p'/'ok' já nascem concluídos; ideias/pendentes podem ser marcados à mão */
+function isDone(k, def){ return state[k]!==undefined ? state[k]===true : !!def; }
+function toggle(k, cur){ state[k]=!cur; save(); render(); }
 
 const TAG={p:['p','✔ Pronto'],e:['e','Em andamento'],x:['x','Pendente'],i:['i','Ideia']};
 
 function render(){
-  // ---- sistemas ----
+  // ---- sistemas (pronto = concluído automaticamente; toggle registra override manual) ----
   const sys=SYSTEMS.filter(s=>s.s!=='i');
   let sd=0;
   $('sysList').innerHTML=sys.map(s=>{
-    const done=isDone('sys_'+s.n);
+    const k=skey('sys',s.n);
+    const done=isDone(k, s.s==='p');
     if(done)sd++;
     const [cls,lbl]=TAG[s.s];
-    return `<li class="${done?'done':''}" onclick="toggle('sys_${s.n.replace(/[^a-zA-Z0-9_]/g,'')}')">
+    return `<li class="${done?'done':''}" onclick="toggle('${k}', ${done})">
       <span class="chk">${done?'✓':''}</span><span class="name">${s.n}</span><span class="tag ${cls}">${lbl}</span></li>`;
   }).join('');
   $('sysCountTxt').textContent=`· ${sd}/${sys.length} concluídos`;
@@ -255,11 +339,12 @@ function render(){
   let ad=0;
   $('astTable').innerHTML=`<tr><th>Asset</th><th>Estado</th></tr>`+ASSETS.map(a=>{
     const ok=a.s==='ok';
-    const done=ok||isDone('ast_'+a.n);
-    if(ok)ad++;
+    const k=skey('ast',a.n);
+    const done=isDone(k, ok);
+    if(done)ad++;
     const st= a.s==='ok'?['ok','Pronto'] : a.s==='wip'?['wip','Em andamento']:['no','Faltante'];
     return `<tr style="${done&&!ok?'opacity:.6':''}">
-      <td style="cursor:pointer" onclick="toggle('ast_${a.n.replace(/[^a-zA-Z0-9_]/g,'')}')">${a.c?'🖼️ ':''}${a.n}</td>
+      <td style="cursor:pointer" onclick="toggle('${k}', ${done})">${a.c?'🖼️ ':''}${a.n}</td>
       <td><span class="status ${st[0]}">${st[1]}</span></td></tr>`;
   }).join('');
   const aTotal=ASSETS.filter(a=>a.s!=='i').length;
@@ -268,24 +353,25 @@ function render(){
   // ---- ideias ----
   const ideas=SYSTEMS.filter(s=>s.s==='i');
   $('ideaList').innerHTML=ideas.map(s=>{
-    const done=isDone('sys_'+s.n);
-    return `<li class="${done?'done':''}" onclick="toggle('sys_${s.n.replace(/[^a-zA-Z0-9_]/g,'')}')">
+    const k=skey('sys',s.n);
+    const done=isDone(k,false);
+    return `<li class="${done?'done':''}" onclick="toggle('${k}', ${done})">
       <span class="chk">${done?'✓':''}</span><span class="name">${s.n}</span><span class="tag i">Ideia</span></li>`;
   }).join('');
   $('ideaN').textContent=`${ideas.length} ideias`;
 
-  // ---- fases / roadmap (barras) ----
+  // ---- fases / roadmap (casa por substring com os nomes atuais dos sistemas) ----
   $('phaseBars').innerHTML=PHASES.map(ph=>{
-    let c=0;
+    let c=0, hit=0;
     ph.items.forEach(it=>{
-      const m=SYSTEMS.find(s=>s.n.toLowerCase().startsWith(it.toLowerCase())||s.n.includes(it));
-      if(m && isDone('sys_'+m.n))c++;
+      const m=SYSTEMS.find(s=>s.n.toLowerCase().includes(it.toLowerCase()));
+      if(m){ hit++; if(isDone(skey('sys',m.n), m.s==='p'))c++; }
     });
-    const pct=Math.round(c/ph.items.length*100);
+    const pct=hit?Math.round(c/hit*100):0;
     const color= pct===100?'var(--good)': pct>0?'var(--gold)':'var(--muted)';
     return `<div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
-        <span>${ph.name}</span><span style="color:${color};font-weight:700">${pct}%</span></div>
+        <span>${ph.name}</span><span style="color:${color};font-weight:700">${c}/${hit} · ${pct}%</span></div>
       <div class="bar"><div style="width:${pct}%;background:${color}"></div></div></div>`;
   }).join('');
 
@@ -298,6 +384,16 @@ function render(){
   $('overallPct').textContent=pct+'%';
   const arc=326.7*(1-pct/100);
   $('donutArc').setAttribute('stroke-dashoffset',arc);
+
+  // ---- memória (changelog por sessão) ----
+  $('memoryList').innerHTML=MEMORY.map(m=>`
+    <div class="mem-entry">
+      <div class="mem-date">${m.d}</div>
+      <div class="mem-body">
+        <div class="mem-title">${m.t}</div>
+        <ul>${m.items.map(i=>`<li>${i}</li>`).join('')}</ul>
+      </div>
+    </div>`).join('');
 }
 render();
 function resetChecks(){ if(confirm('Resetar todos os checkmarks deste navegador?')){ state={}; save(); render(); } }

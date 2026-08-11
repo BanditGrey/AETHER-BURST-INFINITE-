@@ -102,6 +102,102 @@ FX.beam = function (x1, y1, x2, y2, opts) {
   });
 };
 
+/* ---------- Raio procedural (tempestade de verdade, sem asset externo) ----------
+   Polilinha serrilhada por midpoint-displacement + ramos secundários +
+   clarão de origem (a "fenda" no céu) e clarão de impacto no chão.
+   Compartilhado pelo renderer Canvas (FX.render) e pelo Pixi (drawFX). */
+FX.bolts = [];
+FX.lightning = function (x1, y1, x2, y2, opts) {
+  opts = opts || {};
+  const color = opts.color || "#9be3ff";
+  const segs = opts.segs || 10;
+  let off = (opts.rough !== undefined ? opts.rough : Math.hypot(x2 - x1, y2 - y1) * 0.085);
+  let pts = [[x1, y1], [x2, y2]];
+  while (pts.length - 1 < segs) {
+    const nxt = [pts[0]];
+    for (let i = 1; i < pts.length; i++) {
+      const ax = pts[i - 1][0], ay = pts[i - 1][1], bx = pts[i][0], by = pts[i][1];
+      nxt.push([(ax + bx) / 2 + (Math.random() - 0.5) * off * 2,
+                (ay + by) / 2 + (Math.random() - 0.5) * off * 1.1], pts[i]);
+    }
+    pts = nxt; off *= 0.55;
+  }
+  const branches = [];
+  const nb = opts.branches !== undefined ? opts.branches : 1 + Math.floor(Math.random() * 2);
+  const dirDown = (y2 - y1) >= 0 ? 1 : -1;
+  for (let i = 0; i < nb; i++) {
+    const bi = 2 + Math.floor(Math.random() * Math.max(1, pts.length - 5));
+    let bx = pts[bi][0], by = pts[bi][1];
+    const bp = [[bx, by]];
+    let a = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.8);
+    const step = (26 + Math.random() * 40) / 3;
+    for (let s = 0; s < 3; s++) {
+      bx += Math.sin(a) * step * (0.8 + Math.random() * 0.6);
+      by += dirDown * Math.cos(a * 0.5) * step * (0.8 + Math.random() * 0.6);
+      bp.push([bx, by]); a += (Math.random() - 0.5) * 0.9;
+    }
+    branches.push(bp);
+  }
+  FX.bolts.push({
+    pts, branches, x2, y2,
+    x1, y1,
+    life: opts.life || 0.24, maxLife: opts.life || 0.24,
+    color, width: opts.width || 3.5, flash: opts.flash !== false,
+  });
+  if (FX.bolts.length > 26) FX.bolts.splice(0, FX.bolts.length - 26);
+};
+/* traça uma polilinha do raio no canvas 2D */
+function strokeBoltPath(c, pts) {
+  c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+  c.stroke();
+}
+
+/* ---------- Sprites de skill (VFX em imagem com física própria) ----------
+   Padrão de asset: assets/skills/{key}.png com alpha (chroma removido),
+   trimado, projéteis horizontais apontando para a DIREITA. */
+FX.sprites = [];
+const SKILL_SPRITE_V = "skv2-0810";   // cache-bust dos sprites de skill
+const SKILL_IMGS = {};                // key -> HTMLImageElement (browser) | null
+function skillSpriteUrl(key) { return "assets/skills/" + key + ".png?v=" + SKILL_SPRITE_V; }
+function ensureSkillImg(key) {
+  if (SKILL_IMGS[key] !== undefined) return SKILL_IMGS[key];
+  SKILL_IMGS[key] = null;
+  if (typeof Image === "undefined") return null;   // ambiente sem DOM
+  const img = new Image();
+  img.onload = () => { SKILL_IMGS[key] = img; };
+  img.onerror = () => { SKILL_IMGS[key] = false; };
+  img.src = skillSpriteUrl(key);
+  return SKILL_IMGS[key];
+}
+/* envelope de alpha do sprite de skill: fade-in no começo, fade-out no fim */
+function fxSpriteAlpha(s) {
+  const t = s.life / s.maxLife;                       // 1 → 0
+  const ain  = s.fadeIn  > 0 ? Math.min(1, (1 - t) / s.fadeIn)  : 1;
+  const aout = s.fadeOut > 0 ? Math.min(1, t / s.fadeOut) : 1;
+  return Math.max(0, Math.min(ain, aout));
+}
+/* Spawn de sprite de skill (projétil/corte/onda).
+   opts: vx,vy velocidade · life · size (altura alvo em unidades de jogo;
+   largura segue a proporção da imagem) · grow (%/s) · rot,spin (rad) ·
+   fadeIn,fadeOut (fração da vida) · flipX */
+FX.sprite = function (key, x, y, opts) {
+  opts = opts || {};
+  ensureSkillImg(key);
+  FX.sprites.push({
+    key, x, y,
+    vx: opts.vx || 0, vy: opts.vy || 0,
+    life: opts.life || 0.6, maxLife: opts.life || 0.6,
+    size: opts.size || 64,
+    grow: opts.grow !== undefined ? opts.grow : 0,
+    rot: opts.rot || 0, spin: opts.spin || 0,
+    fadeIn:  opts.fadeIn  !== undefined ? opts.fadeIn  : 0.12,
+    fadeOut: opts.fadeOut !== undefined ? opts.fadeOut : 0.30,
+    flipX: !!opts.flipX,
+  });
+  if (FX.sprites.length > 40) FX.sprites.splice(0, FX.sprites.length - 40);
+};
+
 /* texto flutuante genérico (não-dano) */
 FX.floatText = function (x, y, text, opts) {
   opts = opts || {};
@@ -121,21 +217,44 @@ FX.floatText = function (x, y, text, opts) {
 FX.damage = function (x, y, amount, opts) {
   opts = opts || {};
   const crit = !!opts.crit;
+  const kind = opts.kind || "basic";           // basic | skill | burst | heal | miss | shield
+  const eff  = opts.eff  || "";                // "super" | "weak"
+  let size  = 18, color = opts.color || "#ffffff";
+  if      (kind === "skill")  size = 21;
+  else if (kind === "burst")  size = 26;
+  else if (kind === "miss")   { size = 15; if (!opts.color) color = "#9aa3ad"; }
+  else if (kind === "heal")   { size = 16; if (!opts.color) color = "#5cd66c"; }
+  else if (kind === "shield") { size = 14; if (!opts.color) color = "#4cc9ff"; }
+  if (eff === "weak" && !opts.color) color = "#7d8899";
+  if (crit) size = 30;
+  if (opts.size) size = opts.size;
+  const life = crit ? 0.95 : (kind === "burst" ? 0.85 : 0.7);
   FX.damageNumbers.push({
     x: x + (Math.random() - 0.5) * 18,
     y: y + (Math.random() - 0.5) * 10,
-    amount: amount,
-    life: crit ? 0.95 : 0.7,
-    maxLife: crit ? 0.95 : 0.7,
-    color: opts.color || (crit ? "#ffd23f" : "#ffffff"),
-    size: crit ? 30 : 18,
-    crit,
+    amount, text: opts.text || null,
+    life, maxLife: life,
+    color, size, crit, kind, eff,
     vy: -55 - Math.random() * 30,
     vx: (Math.random() - 0.5) * 40,
     element: opts.element,
   });
   if (crit) FX.shake(7, 0.18);
 };
+/* rótulo final do número de dano (usado no Canvas e no Pixi) */
+function fxDamageLabel(d) {
+  if (d.text) return d.text;
+  let s = (d.kind === "heal" ? "+" : "") + formatNumber(d.amount);
+  if (d.eff === "super") s += " ▲";
+  else if (d.eff === "weak") s += " ▼";
+  return s;
+}
+/* etiqueta de tipo exibida acima do número (Canvas e Pixi) */
+function fxDamageTag(d) {
+  if (d.crit)   return { text: "CRIT!",            color: "#ffd23f" };
+  if (d.kind === "burst") return { text: "BURST",  color: d.color };
+  return null;
+}
 
 /* ---------- Update ---------- */
 FX.update = function (dt) {
@@ -181,6 +300,22 @@ FX.update = function (dt) {
     const b = FX.beams[i];
     b.life -= dt;
     if (b.life <= 0) FX.beams.splice(i, 1);
+  }
+  // raios
+  for (let i = FX.bolts.length - 1; i >= 0; i--) {
+    const b = FX.bolts[i];
+    b.life -= dt;
+    if (b.life <= 0) FX.bolts.splice(i, 1);
+  }
+  // sprites de skill (projéteis/cortes/ondas)
+  for (let i = FX.sprites.length - 1; i >= 0; i--) {
+    const s = FX.sprites[i];
+    s.life -= dt;
+    if (s.life <= 0) { FX.sprites.splice(i, 1); continue; }
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.rot += s.spin * dt;
+    s.size *= (1 + s.grow * dt);
   }
   // damage numbers
   for (let i = FX.damageNumbers.length - 1; i >= 0; i--) {
@@ -239,6 +374,42 @@ FX.render = function (ctx) {
     ctx.restore();
   }
 
+  // raios (serrilhado: halo + corpo + núcleo branco + ramos + clarões)
+  for (const b of FX.bolts) {
+    const t = Math.max(0, b.life / b.maxLife);
+    const flick = 0.6 + 0.4 * Math.sin(b.life * 95);   // cintilação elétrica
+    const a = t * flick;
+    ctx.save();
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.shadowColor = b.color; ctx.shadowBlur = 22;
+    ctx.globalAlpha = a * 0.30; ctx.strokeStyle = b.color; ctx.lineWidth = b.width * 3.4;
+    strokeBoltPath(ctx, b.pts);
+    ctx.globalAlpha = a; ctx.lineWidth = b.width;
+    strokeBoltPath(ctx, b.pts);
+    ctx.globalAlpha = a * 0.95; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = Math.max(1, b.width * 0.4);
+    strokeBoltPath(ctx, b.pts);
+    ctx.shadowBlur = 10;
+    for (const bp of b.branches) {
+      ctx.globalAlpha = a * 0.8; ctx.strokeStyle = b.color; ctx.lineWidth = Math.max(1, b.width * 0.5);
+      strokeBoltPath(ctx, bp);
+      ctx.globalAlpha = a * 0.65; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = Math.max(0.8, b.width * 0.22);
+      strokeBoltPath(ctx, bp);
+    }
+    if (b.flash) {
+      // clarão no impacto (solo)
+      let g = ctx.createRadialGradient(b.x2, b.y2, 2, b.x2, b.y2, 52);
+      g.addColorStop(0, "#ffffff"); g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.globalAlpha = a * 0.6; ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(b.x2, b.y2, 52, 0, Math.PI * 2); ctx.fill();
+      // clarão na origem — a "fenda" de onde o raio sai (nunca cai "do nada")
+      g = ctx.createRadialGradient(b.x1, b.y1, 2, b.x1, b.y1, 64);
+      g.addColorStop(0, b.color); g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = a * 0.4; ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(b.x1, b.y1, 64, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   // particles
   for (const p of FX.particles) {
     const a = Math.max(0, p.life / p.maxLife);
@@ -258,24 +429,44 @@ FX.render = function (ctx) {
     ctx.restore();
   }
 
+  // sprites de skill (projéteis/cortes/ondas) — acima das partículas
+  for (const s of FX.sprites) {
+    const img = ensureSkillImg(s.key);
+    if (!img) continue;                              // ainda carregando / ausente
+    const a = fxSpriteAlpha(s);
+    if (a <= 0.01) continue;
+    const h = s.size;
+    const w = h * (img.width / img.height || 2);     // largura pela proporção real
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(s.x, s.y);
+    if (s.rot) ctx.rotate(s.rot);
+    if (s.flipX) ctx.scale(-1, 1);
+    ctx.shadowColor = "#bfe9ff"; ctx.shadowBlur = 18; // brilho de energia
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+
   // damage numbers
   for (const d of FX.damageNumbers) {
     const a = Math.min(1, d.life / d.maxLife * 1.6);
-    const grow = d.crit ? (1.25 - 0.25 * a) : 1;
+    const grow = d.crit ? (1.25 - 0.25 * a) : (d.kind === "burst" ? (1.18 - 0.18 * a) : 1);
+    const tag = fxDamageTag(d);
     ctx.save();
     ctx.globalAlpha = a;
     ctx.font = `900 ${d.size * grow}px Orbitron, system-ui, sans-serif`;
     ctx.textAlign = "center";
     ctx.lineWidth = 4;
     ctx.strokeStyle = "rgba(0,0,0,0.85)";
-    ctx.strokeText(formatNumber(d.amount), d.x, d.y);
-    ctx.fillStyle = d.color;
-    if (d.crit) { ctx.shadowColor = d.color; ctx.shadowBlur = 14; }
-    ctx.fillText(formatNumber(d.amount), d.x, d.y);
-    if (d.crit) {
+    ctx.strokeText(fxDamageLabel(d), d.x, d.y);
+    ctx.fillStyle = d.crit ? "#ffd23f" : d.color;
+    if (d.crit || d.kind === "burst" || d.kind === "skill" || d.kind === "heal") { ctx.shadowColor = d.color; ctx.shadowBlur = d.crit ? 14 : 9; }
+    ctx.fillText(fxDamageLabel(d), d.x, d.y);
+    if (tag) {
+      ctx.shadowBlur = 8;
       ctx.font = `900 ${12 * grow}px Orbitron, sans-serif`;
-      ctx.fillStyle = "#ffd23f";
-      ctx.fillText("CRIT!", d.x, d.y - d.size * grow - 4);
+      ctx.fillStyle = tag.color;
+      ctx.fillText(tag.text, d.x, d.y - d.size * grow - 4);
     }
     ctx.restore();
   }

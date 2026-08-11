@@ -69,3 +69,29 @@ PIXI.Graphics/Text/Sprite; a lógica (`engine/data/fx/main-UI`) é idêntica nas
 ---
 
 **Feito com ❤️ para o AETHER BURST: INFINITE**
+
+## 🧪 Testes headless
+
+**No jogo:** botão **🧪 Testes** na navbar — auto-teste com "olho humano" (análise de pixels dos sprites, geometria real dos painéis, clique físico, profundidade da cena, raio serrilhado…), 20 frentes em `js/selftest.js`. Regra do repo: **feature nova ⇒ entrada nova no `SELFTESTS`**. Para CI/headless: `index.html?selftest=1` roda sozinho e expõe `window.__selftestResults`.
+
+Suítes em `tests/` (**trackeadas no git** — já perdemos elas uma vez por sandbox wipe + gitignore, nunca mais), rodam com Node puro (vm) + jsdom:
+
+```bash
+node tests/test_gear.js     # gear: drops, equipar slots/acessórios, cap, save/load, migração legado (27)
+node tests/test_dmg.js      # dano: carta elemental, mitigação/pen, crit, esquiva, escudo, kills (26)
+node tests/test_procs.js    # os 11 gear procs com efeito real + caps + resets de combate (23)
+node tests/test_skills2.js  # TODOS os assets referenciados existem em disco + skills executam (19)
+node tests/test_ui.js       # markup do painel RIFT GEAR c/ contagens exatas + registro do auto-teste (19)
+node tests/smoke_ui.js      # jsdom: fluxo real splash→marcha→painéis→clique→tooltip→save (31)
+# total: 145 checagens — saída "== nome: X passaram, 0 falharam ==" e exit≠0 se quebrar
+```
+
+**Browser real (Chromium headless local — sem root, sem CDN):**
+
+```bash
+bash tests/setup_browser.sh   # 1× por sessão do sandbox (o /tmp é limpo entre elas)
+python3 -m http.server 8000 --bind 0.0.0.0 &   # servidor local
+node tests/st.js              # roda a suíte 🧪 in-game e imprime o relatório (exit 1 se falhar)
+node tests/shot.js gear       # clique físico p/ equipar, rolagem da bag, stats na viewport + screenshots
+node tests/shot.js game       # screenshot da cena + tempestade de raios
+```

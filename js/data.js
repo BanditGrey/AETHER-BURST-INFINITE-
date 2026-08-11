@@ -190,19 +190,56 @@ const ZONES = [
 
 /* ---------- EQUIPAMENTOS (exemplos com personalidade) ---------- */
 const EQUIPMENT_POOL = [
-  { name:"Volt Edge",         slot:"weapon",   rarity:"epic",      desc:"Ataques têm 20% de chance de causar descarga em cadeia.", stats:{ atq: 0.10, crt: 0.05 } },
-  { name:"Phantom Fang",      slot:"weapon",   rarity:"epic",      desc:"Após esquiva, causa 300% de dano no próximo ataque.",     stats:{ atq: 0.09, eva: 0.10 } },
-  { name:"Solar Greatsword",  slot:"weapon",   rarity:"legendary", desc:"Burst causa dano adicional proporcional ao HP atual.",    stats:{ atq: 0.14, cdg: 0.15 } },
-  { name:"Glacial Staff",     slot:"weapon",   rarity:"epic",      desc:"Skills têm 30% de chance de congelar.",                   stats:{ atq: 0.10, pen: 8 } },
-  { name:"Overcharge Cannon", slot:"weapon",   rarity:"epic",      desc:"Cada ataque aumenta 2% o dano do próximo.",               stats:{ atq: 0.11, spd: 0.06 } },
-  { name:"Void Blade",        slot:"weapon",   rarity:"legendary", desc:"Aplica Gravity Mark automaticamente no básico.",          stats:{ atq: 0.13, crt: 0.08 } },
+  { name:"Volt Edge",         slot:"weapon",   rarity:"epic",      desc:"Ataques têm 20% de chance de causar descarga em cadeia.", proc:"volt_edge", stats:{ atq: 0.10, crt: 0.05 } },
+  { name:"Phantom Fang",      slot:"weapon",   rarity:"epic",      desc:"Após esquiva, causa 300% de dano no próximo ataque.",     proc:"phantom_fang", stats:{ atq: 0.09, eva: 0.10 } },
+  { name:"Solar Greatsword",  slot:"weapon",   rarity:"legendary", desc:"Burst causa dano adicional proporcional ao HP atual.",    proc:"solar_greatsword", stats:{ atq: 0.14, cdg: 0.15 } },
+  { name:"Glacial Staff",     slot:"weapon",   rarity:"epic",      desc:"Skills têm 30% de chance de congelar.",                   proc:"glacial_staff", stats:{ atq: 0.10, pen: 8 } },
+  { name:"Overcharge Cannon", slot:"weapon",   rarity:"epic",      desc:"Cada ataque aumenta 2% o dano do próximo.",               proc:"overcharge_cannon", stats:{ atq: 0.11, spd: 0.06 } },
+  { name:"Void Blade",        slot:"weapon",   rarity:"legendary", desc:"Aplica Gravity Mark automaticamente no básico.",          proc:"void_blade", stats:{ atq: 0.13, crt: 0.08 } },
   { name:"Burst Accelerator", slot:"core",     rarity:"epic",      desc:"Barra de Aether enche 25% mais rápido.",                  stats:{ ach: 0.25 } },
-  { name:"Resonance Amp",     slot:"core",     rarity:"rare",      desc:"+10% de chance de Burst Sync.",                           stats:{ crt: 0.04, spd: 0.04 } },
-  { name:"Infinity Loop",     slot:"core",     rarity:"legendary", desc:"Ao usar Burst, recupera 15% do HP.",                      stats:{ hp: 0.12, ach: 0.10 } },
+  { name:"Resonance Amp",     slot:"core",     rarity:"rare",      desc:"+10% de chance de Burst Sync.",                           proc:"resonance_amp", stats:{ crt: 0.04, spd: 0.04 } },
+  { name:"Infinity Loop",     slot:"core",     rarity:"legendary", desc:"Ao usar Burst, recupera 15% do HP.",                      proc:"infinity_loop", stats:{ hp: 0.12, ach: 0.10 } },
   { name:"Overload Chip",     slot:"core",     rarity:"epic",      desc:"Críticos aumentam o dano do próximo Burst.",              stats:{ crt: 0.10, cdg: 0.12 } },
-  { name:"Echo Fragment",     slot:"relic",    rarity:"legendary", desc:"Quando um aliado usa Burst, ganha 10% ATQ por 5s.",       stats:{ atq: 0.08, hp: 0.06 } },
-  { name:"Rift Crystal",      slot:"relic",    rarity:"epic",      desc:"Ataques em inimigos com debuff causam 20% mais dano.",    stats:{ atq: 0.09, pen: 6 } },
-  { name:"Singularity Core",  slot:"relic",    rarity:"legendary", desc:"Uma vez por combate, sobrevive com 1 HP.",                stats:{ hp: 0.14, def: 0.10 } },
+  { name:"Echo Fragment",     slot:"relic",    rarity:"legendary", desc:"Quando um aliado usa Burst, ganha 10% ATQ por 5s.",       proc:"echo_fragment", stats:{ atq: 0.08, hp: 0.06 } },
+  { name:"Rift Crystal",      slot:"relic",    rarity:"epic",      desc:"Ataques em inimigos com debuff causam 20% mais dano.",    proc:"rift_crystal", stats:{ atq: 0.09, pen: 6 } },
+  { name:"Singularity Core",  slot:"relic",    rarity:"legendary", desc:"Uma vez por combate, sobrevive com 1 HP.",                proc:"singularity_core", stats:{ hp: 0.14, def: 0.10 } },
+
+  { name:"Scrap Mail",           slot:"armor",    rarity:"common",    desc:"Placas remendadas de quem já caiu no Rift.",         stats:{ hp: 0.05 } },
+  { name:"Ironweave Guard",      slot:"armor",    rarity:"uncommon",  desc:"Malha trançada com fios de ferro dimensional.",      stats:{ hp: 0.08, def: 0.05 } },
+  { name:"Windguard Plate",      slot:"armor",    rarity:"rare",      desc:"O vento desvia das suas bordas.",                    stats:{ hp: 0.11, def: 0.08 } },
+  { name:"Oblivion Carapace",    slot:"armor",    rarity:"epic",      desc:"Escamas de algo que sobreviveu ao vazio.",           stats:{ hp: 0.15, def: 0.12 } },
+  { name:"Aegiscale of the Rift",slot:"armor",    rarity:"legendary", desc:"Uma égide viva que pulsa com aether.",               stats:{ hp: 0.19, def: 0.16 } },
+
+  /* ---------- ACESSÓRIOS (4 slots: anel · brinco · colar · pulseira) ----------
+     Identidade de stats por tipo:
+       ANEL     💍 → precisão letal   (CRT + CDG)
+       BRINCO   ✨ → perfuração/aether (PEN + ACH)
+       COLAR    📿 → vitalidade       (HP + DEF)
+       PULSEIRA ⛓️ → mobilidade       (SPD + EVA)
+     Cada tipo tem uma peça em cada raridade (comum → lendária). */
+  { name:"Copper Band",        slot:"ring",     rarity:"common",    desc:"Aro simples, afiado pela energia do Rift.",        stats:{ crt: 0.03 } },
+  { name:"Falcon Ring",        slot:"ring",     rarity:"uncommon",  desc:"Olho de predador: mira mais certeira.",            stats:{ crt: 0.05, cdg: 0.08 } },
+  { name:"Tempest Loop",       slot:"ring",     rarity:"rare",      desc:"O metal zune com a estática da tempestade.",       stats:{ crt: 0.07, cdg: 0.12 } },
+  { name:"Rift-Eye Band",      slot:"ring",     rarity:"epic",      desc:"Um olho dimensional gravado no aro.",              stats:{ crt: 0.09, cdg: 0.16 } },
+  { name:"Crimson Ouroboros",  slot:"ring",     rarity:"legendary", desc:"A serpente que devora o próprio limite.",          stats:{ crt: 0.12, cdg: 0.22 } },
+
+  { name:"Quartz Stud",        slot:"earring",  rarity:"common",    desc:"Quartzo bruto que capta ecos do Rift.",            stats:{ pen: 3 } },
+  { name:"Spark Drop",         slot:"earring",  rarity:"uncommon",  desc:"Uma faísca suspensa que nunca apaga.",             stats:{ pen: 5, ach: 0.04 } },
+  { name:"Starfall Earring",   slot:"earring",  rarity:"rare",      desc:"Fragmento de estrela cadente.",                    stats:{ pen: 7, ach: 0.07 } },
+  { name:"Void Needle",        slot:"earring",  rarity:"epic",      desc:"Perfura o tecido da realidade.",                   stats:{ pen: 10, ach: 0.09 } },
+  { name:"Singularity Drop",   slot:"earring",  rarity:"legendary", desc:"Um horizonte de eventos em miniatura.",            stats:{ pen: 14, ach: 0.12 } },
+
+  { name:"Traveler's Charm",   slot:"necklace", rarity:"common",    desc:"Amuleto de quem atravessa zonas rachadas.",        stats:{ hp: 0.04 } },
+  { name:"Guardian Pendant",   slot:"necklace", rarity:"uncommon",  desc:"Emite um pulso suave de proteção.",                stats:{ hp: 0.06, def: 0.04 } },
+  { name:"Moonward Collar",    slot:"necklace", rarity:"rare",      desc:"Forjado sob a lua de outra dimensão.",             stats:{ hp: 0.09, def: 0.07 } },
+  { name:"Aether Heart",       slot:"necklace", rarity:"epic",      desc:"Um segundo coração batendo em sincronia.",         stats:{ hp: 0.13, def: 0.10 } },
+  { name:"Void Reliquary",     slot:"necklace", rarity:"legendary", desc:"Relíquia selada com luz do núcleo infinito.",      stats:{ hp: 0.17, def: 0.14 } },
+
+  { name:"Leather Wrap",       slot:"bracelet", rarity:"common",    desc:"Couro de algo que corria muito rápido.",           stats:{ spd: 0.03 } },
+  { name:"Gale Bracelet",      slot:"bracelet", rarity:"uncommon",  desc:"Vento preso em elos de metal.",                    stats:{ spd: 0.05, eva: 0.03 } },
+  { name:"Vortex Bangle",      slot:"bracelet", rarity:"rare",      desc:"Gira sem parar, mesmo no silêncio absoluto.",      stats:{ spd: 0.07, eva: 0.05 } },
+  { name:"Zephyr Cuff",        slot:"bracelet", rarity:"epic",      desc:"Quem o veste chega antes do próprio som.",         stats:{ spd: 0.09, eva: 0.08 } },
+  { name:"Stormdancer's Bind", slot:"bracelet", rarity:"legendary", desc:"A dança da tempestade presa aos pulsos.",          stats:{ spd: 0.12, eva: 0.11 } },
 ];
 
 /* ---------- INFINITY CIRCUIT (árvore de bônus permanentes) ---------- */
@@ -218,7 +255,7 @@ const INFINITY_NODES = [
   { id:"drop",   x:.82, y:.30, branch:"recursos",  name:"Drop Rate +", cost:3, desc:"+15% Drop de equipamentos",        effect:{ drop:0.15 } },
   { id:"offline",x:.82, y:.56, branch:"recursos",  name:"Offline +",   cost:3, desc:"+15% eficiência offline",          effect:{ offline:0.15 } },
   { id:"ach1",   x:.34, y:.74, branch:"poder",     name:"Aether Charge",cost:4, desc:"+20% velocidade de Burst",         effect:{ ach:0.20 } },
-  { id:"slot6",  x:.66, y:.74, branch:"recursos",  name:"6º Slot",     cost:8, desc:"Desbloqueia 6º Runner na formação",effect:{ slot6:true } },
+  { id:"slot6",  x:.66, y:.74, branch:"recursos",  name:"Overdrive",    cost:8, desc:"+15% velocidade de Burst global (a formação 2×3 já inclui os 6 slots)", effect:{ ach:0.15 } },
 ];
 
 /* ============================================================
@@ -267,4 +304,19 @@ const COMBAT_BANTER = {
   nina:   ["Comam isso!","Surto total!","Vai, vai, vai!"],
   rex:    ["...","Grrr.","RAAHH!"],
   sable:  ["............","Suma.","Adeus."],
+};
+
+/* ---------- GEAR PROCS (efeitos especiais REAIS) ---------- */
+const GEAR_PROCS = {
+  volt_edge:        "Descarga em cadeia",
+  phantom_fang:     "Pós-esquiva ×3",
+  solar_greatsword: "Burst + dano por HP",
+  glacial_staff:    "Skill congela (30%)",
+  overcharge_cannon:"+2% dano por ataque",
+  void_blade:       "Gravity Mark no básico",
+  resonance_amp:    "+10% Burst Sync",
+  infinity_loop:    "Burst cura 15% HP",
+  echo_fragment:    "Burst aliado: +10% ATQ",
+  rift_crystal:     "+20% vs alvo com debuff",
+  singularity_core: "Sobrevive com 1 HP (1×/combate)",
 };
